@@ -1,0 +1,42 @@
+@ECommerce.API_HostAddress = http://localhost:5073
+
+GET {{ECommerce.API_HostAddress}}/user/all
+###
+POST {{ECommerce.API_HostAddress}}/user/add
+Content-Type: application/json
+{
+    "Email": "johndoe@example.com",
+    "PasswordHash": "password123",
+    "FirstName": "John",
+    "LastName": "Doe"
+}
+###
+POST {{ECommerce.API_HostAddress}}/user/add
+Content-Type: application/json
+{
+    "Email": "johnWick@example.com",
+    "PasswordHash": "passwor4123",
+    "FirstName": "John",
+    "LastName": "wick"
+    ""
+}
+
+###
+POST {{ECommerce.API_HostAddress}}/user/add
+Content-Type: application/json
+{
+    "Email": "peta@example.com",
+    "PasswordHash": "Hitler1488",
+    "FirstName": "Ivan",
+    "LastName": "Petrovish",
+    "DateOfBirth": "1990-05-15",
+    "PhoneNumber" : "+38095421468",
+    "UserRole": "Admin"
+}
+###
+GET {{ECommerce.API_HostAddress}}/user/{bfd55474-f311-42c7-9554-5e3e500a7ead}
+###
+
+
+
+
