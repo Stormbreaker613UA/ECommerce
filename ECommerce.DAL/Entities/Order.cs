@@ -7,7 +7,8 @@ public class Order : AuditableEntity
     public DateTime OrderDate { get; set; }
     public decimal TotalAmount { get; set; }
     public Guid OrderStatusId { get; set; }
-    public virtual OrderStatus OrderStatus { get; set; } = new OrderStatus();
+    public virtual OrderStatus OrderStatus { get; set; } = null!;
+    public virtual Invoice? Invoice { get; set; }
     public virtual ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

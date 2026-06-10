@@ -238,12 +238,12 @@ public class ECommerceDbContext : DbContext
             os.Property(x => x.IsActive).HasDefaultValue(true);
             os.HasIndex(x => x.Name).IsUnique();
             os.HasData(
-                new OrderStatus { Id = Guid.Parse("b1b2c3d4-0000-0000-0000-000000000001"), Name = "Pending", CanCancel = true, CanRefund = false, CanShip = false, IsActive = true },
-                new OrderStatus { Id = Guid.Parse("b1b2c3d4-0000-0000-0000-000000000002"), Name = "Confirmed", CanCancel = true, CanRefund = false, CanShip = true, IsActive = true },
-                new OrderStatus { Id = Guid.Parse("b1b2c3d4-0000-0000-0000-000000000003"), Name = "Shipped", CanCancel = false, CanRefund = false, CanShip = false, IsActive = true },
-                new OrderStatus { Id = Guid.Parse("b1b2c3d4-0000-0000-0000-000000000004"), Name = "Delivered", CanCancel = false, CanRefund = true, CanShip = false, IsActive = true },
-                new OrderStatus { Id = Guid.Parse("b1b2c3d4-0000-0000-0000-000000000005"), Name = "Cancelled", CanCancel = false, CanRefund = false, CanShip = false, IsActive = true },
-                new OrderStatus { Id = Guid.Parse("b1b2c3d4-0000-0000-0000-000000000006"), Name = "Refunded", CanCancel = false, CanRefund = false, CanShip = false, IsActive = true }
+                new OrderStatus { Id = new Guid("b1b2c3d4-0000-0000-0000-000000000001"), Name = "Pending", CanCancel = true, CanRefund = false, CanShip = false, IsActive = true },
+                new OrderStatus { Id = new Guid("b1b2c3d4-0000-0000-0000-000000000002"), Name = "Confirmed", CanCancel = true, CanRefund = false, CanShip = true, IsActive = true },
+                new OrderStatus { Id = new Guid("b1b2c3d4-0000-0000-0000-000000000003"), Name = "Shipped", CanCancel = false, CanRefund = false, CanShip = false, IsActive = true },
+                new OrderStatus { Id = new Guid("b1b2c3d4-0000-0000-0000-000000000004"), Name = "Delivered", CanCancel = false, CanRefund = true, CanShip = false, IsActive = true },
+                new OrderStatus { Id = new Guid("b1b2c3d4-0000-0000-0000-000000000005"), Name = "Cancelled", CanCancel = false, CanRefund = false, CanShip = false, IsActive = true },
+                new OrderStatus { Id = new Guid("b1b2c3d4-0000-0000-0000-000000000006"), Name = "Refunded", CanCancel = false, CanRefund = false, CanShip = false, IsActive = true }
             );
 
             os.HasMany(x => x.Orders)
@@ -264,6 +264,7 @@ public class ECommerceDbContext : DbContext
             i.Property(x => x.BillingAddress).IsRequired().HasMaxLength(500);
             i.Property(x => x.Notes).HasMaxLength(500);
             i.HasIndex(x => x.InvoiceNumber).IsUnique();
+            i.HasIndex(x=> x.OrderId).IsUnique();
             i.HasQueryFilter(x => !x.IsDeleted);
         });
         modelBuilder.Entity<Review>(r =>

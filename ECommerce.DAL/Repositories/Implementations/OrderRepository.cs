@@ -7,40 +7,40 @@ namespace ECommerce.DAL.Repositories.Implementations;
 
 public class OrderRepository : IOrderRepository
 {
-    private readonly ECommerceDbContext _context;
+    private readonly ECommerceDbContext _dbContext;
 
-    public OrderRepository(ECommerceDbContext context)
+    public OrderRepository(ECommerceDbContext dbContext)
     {
-        _context = context;
+        _dbContext = dbContext;
     }
 
     public async Task<Order?> GetByIdAsync(Guid id)
     {
-        return await _context.Orders.FindAsync(id);
+        return await _dbContext.Orders.FindAsync(id);
     }
 
     public async Task<List<Order>> GetByUserIdAsync(Guid userId)
     {
-        return await _context.Orders
+        return await _dbContext.Orders
             .Where(o => o.UserId == userId)
             .ToListAsync();
     }
 
     public async Task<List<Order>> GetAllAsync()
     {
-        return await _context.Orders.ToListAsync();
+        return await _dbContext.Orders.ToListAsync();
     }
 
     public async Task AddAsync(Order order)
     {
-        await _context.Orders.AddAsync(order);
-        await _context.SaveChangesAsync();
+        await _dbContext.Orders.AddAsync(order);
+        await _dbContext.SaveChangesAsync();
     }
 
-    public async Task<List<Order>> GetByStatusAsync(Guid statusId)
+    public async Task<List<Order>> GetByStatusAsync(Guid orderStatusId)
     {
-        return await _context.Orders
-            .Where(o => o.StatusId == statusId)
+        return await _dbContext.Orders
+            .Where(o => o.OrderStatusId == orderStatusId)
             .ToListAsync();
     }
 }
