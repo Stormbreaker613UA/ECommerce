@@ -40,4 +40,9 @@ public class ProductBucketRepository : IProductBucketRepository
         _dbContext.ProductBuckets.Update(bucket);
         return Task.CompletedTask;
     }
+
+    public Task DeleteAsync(Guid id)
+    {
+        throw new NotImplementedException(); // TODO: Implement delete logic if needed
+    }
 }

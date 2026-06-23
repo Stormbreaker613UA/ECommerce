@@ -1,61 +1,108 @@
-using ECommerce.BLL.Services.Implementations;
+using ECommerce.BLL.Services.Interfaces;
 using ECommerce.DAL.DTOs.User;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ECommerce.API.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/users")]
+[Authorize]
 public class UserController : ControllerBase
 {
-    private readonly UserService _userService;
+    private readonly IUserService _userService;
 
-    public UserController(UserService userService)
+    public UserController(IUserService userService)
     {
         _userService = userService;
     }
 
     [HttpGet("all")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<IEnumerable<GetUserDto>>> GetAllUsersAsync()
     {
         var users = await _userService.GetAllUsersAsync();
+
         return Ok(users);
     }
-    [HttpGet("{id}")]
+
+    [HttpGet("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<GetUserDto>> GetUserByIdAsync(Guid id)
     {
         var user = await _userService.GetUserByIdAsync(id);
+
         if (user == null)
         {
             return NotFound();
         }
+
         return Ok(user);
     }
-    [HttpPost("add")]
-    public async Task<ActionResult<GetUserDto>> AddUserAsync(AddUserDto addUserDto)
+
+    [HttpGet("me")]
+    public async Task<ActionResult<GetUserDto>> GetCurrentUserAsync()
     {
-        var addedUser = await _userService.AddUserAsync(addUserDto);
-        return Ok(addedUser);
+        var userId = GetCurrentUserId();
+
+        var user = await _userService.GetCurrentUserAsync(userId);
+
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(user);
     }
 
-    [HttpPut("update/{id}")]
-    public async Task<IActionResult> UpdateUserAsync(Guid id, UpdateUserDto updateUserDto)
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateCurrentUserAsync(UpdateUserDto updateUserDto)
+    {
+        var userId = GetCurrentUserId();
+
+        await _userService.UpdateUserAsync(userId, updateUserDto);
+
+        return Ok();
+    }
+
+    [HttpPut("me/email")]
+    public async Task<IActionResult> UpdateCurrentUserEmailAsync(ChangeUserEmailDto changeUserEmailDto)
+    {
+        var userId = GetCurrentUserId();
+
+        await _userService.UpdateUserEmailAsync(userId, changeUserEmailDto);
+
+        return Ok();
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateUserByAdminAsync(Guid id, UpdateUserDto updateUserDto)
     {
         await _userService.UpdateUserAsync(id, updateUserDto);
+
         return Ok();
     }
 
-    [HttpPut("update/{id}/{email}")]
-    public async Task<IActionResult> UpdateUserEmailAsync(Guid id, ChangeUserEmailDto changeUserEmailDto)
-    {
-        await _userService.UpdateUserEmailAsync(id, changeUserEmailDto);
-        return Ok();
-    }
-
-    [HttpDelete("delete/{id}")]
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteUserAsync(Guid id)
     {
         await _userService.DeleteUserAsync(id);
+
         return NoContent();
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdStr, out var userId))
+        {
+            throw new UnauthorizedAccessException("Invalid user token.");
+        }
+
+        return userId;
     }
 }

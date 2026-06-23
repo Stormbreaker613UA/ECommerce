@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using ECommerce.BLL.Services.Interfaces;
 using ECommerce.DAL.Entities;
 using ECommerce.DAL.Repositories.Interfaces;
@@ -40,7 +37,7 @@ namespace ECommerce.BLL.Services.Implementations
             existing.Name = product.Name;
             existing.Description = product.Description;
             existing.Price = product.Price;
-            existing.Quantity = product.Quantity;
+            existing.StockQuantity = product.StockQuantity;
             existing.CategoryId = product.CategoryId;
 
             await _productRepository.UpdateAsync(existing);

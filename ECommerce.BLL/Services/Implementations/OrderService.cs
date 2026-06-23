@@ -39,7 +39,7 @@ namespace ECommerce.BLL.Services.Implementations
 
             existing.UserId = order.UserId;
             existing.Total = order.Total;
-            existing.Status = order.Status;
+            existing.OrderStatus = order.OrderStatus;
 
             await _orderRepository.UpdateAsync(existing);
         }

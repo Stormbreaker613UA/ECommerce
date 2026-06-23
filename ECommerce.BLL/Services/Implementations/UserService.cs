@@ -1,10 +1,11 @@
-﻿using ECommerce.DAL.DTOs.User;
+﻿using ECommerce.BLL.Services.Interfaces;
+using ECommerce.DAL.DTOs.User;
 using ECommerce.DAL.Entities;
 using ECommerce.DAL.Repositories.Interfaces;
 using System.Data;
 namespace ECommerce.BLL.Services.Implementations;
 
-public class UserService
+public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
 
@@ -12,9 +13,11 @@ public class UserService
     {
         _userRepository = userRepository;
     }
+
     public async Task<List<GetUserDto>> GetAllUsersAsync()
     {
         var users = await _userRepository.GetAllAsync();
+
         return users.Select(user => new GetUserDto
         {
             Id = user.Id,
@@ -29,10 +32,12 @@ public class UserService
     public async Task<GetUserDto?> GetUserByIdAsync(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
+
         if (user == null)
         {
             return null;
         }
+
         return new GetUserDto
         {
             Id = user.Id,
@@ -44,44 +49,20 @@ public class UserService
         };
     }
 
-    public async Task<GetUserDto> AddUserAsync(AddUserDto addUserDto)
+    public async Task<GetUserDto?> GetCurrentUserAsync(Guid userId)
     {
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = addUserDto.Email,
-            PasswordHash = addUserDto.PasswordHash, // add proper password hashing in a real application
-            FirstName = addUserDto.FirstName,
-            LastName = addUserDto.LastName,
-            DateOfBirth = addUserDto.DateOfBirth,
-            PhoneNumber = addUserDto.PhoneNumber,
-            UserRoleId = Guid.Parse("00000000-0000-0000-0000-000000000001") // default role, should be set properly in a real application
-        };
-
-        await _userRepository.AddAsync(user);
-
-        var getUserDto = new GetUserDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            DateOfBirth = user.DateOfBirth,
-            PhoneNumber = user.PhoneNumber
-        };
-
-        return getUserDto;
+        return await GetUserByIdAsync(userId);
     }
 
     public async Task UpdateUserAsync(Guid id, UpdateUserDto updateUserDto)
     {
         var existingUser = await _userRepository.GetByIdAsync(id)
-            ?? throw new KeyNotFoundException("User not found");
+            ?? throw new KeyNotFoundException("User not found.");
 
-        existingUser.FirstName = updateUserDto?.FirstName;
-        existingUser.LastName = updateUserDto?.LastName;
-        existingUser.DateOfBirth = updateUserDto?.DateOfBirth;
-        existingUser.PhoneNumber = updateUserDto?.PhoneNumber;
+        existingUser.FirstName = updateUserDto.FirstName ?? existingUser.FirstName;
+        existingUser.LastName = updateUserDto.LastName ?? existingUser.LastName;
+        existingUser.DateOfBirth = updateUserDto.DateOfBirth ?? existingUser.DateOfBirth;
+        existingUser.PhoneNumber = updateUserDto.PhoneNumber ?? existingUser.PhoneNumber;
 
         await _userRepository.UpdateAsync(existingUser);
     }
@@ -89,16 +70,25 @@ public class UserService
     public async Task UpdateUserEmailAsync(Guid id, ChangeUserEmailDto changeUserEmailDto)
     {
         var existingUser = await _userRepository.GetByIdAsync(id)
-        ?? throw new KeyNotFoundException("User not found");
+            ?? throw new KeyNotFoundException("User not found.");
+
+        var userWithSameEmail = await _userRepository.GetByEmailAsync(changeUserEmailDto.NewEmail);
+
+        if (userWithSameEmail != null && userWithSameEmail.Id != id)
+        {
+            throw new InvalidOperationException("User with this email already exists.");
+        }
 
         existingUser.Email = changeUserEmailDto.NewEmail;
+
         await _userRepository.UpdateAsync(existingUser);
     }
 
     public async Task DeleteUserAsync(Guid id)
     {
-        var user = await _userRepository.GetByIdAsync(id);
-        if (user != null)
-            await _userRepository.DeleteAsync(user.Id);
+        var user = await _userRepository.GetByIdAsync(id)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        await _userRepository.DeleteAsync(user.Id);
     }
 }

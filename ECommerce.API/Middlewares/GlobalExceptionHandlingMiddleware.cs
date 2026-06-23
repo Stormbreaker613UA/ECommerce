@@ -1,18 +1,23 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Hosting;
+using System.Text.Json;
 
-namespace ECommerce.BLL.Middlewares;
-/*
-public class GlobalExceptionHandlingMiddleware(
-    RequestDelegate next,
-    ILogger<GlobalExceptionHandlingMiddleware> logger,
-    Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment)
+namespace ECommerce.API.Middlewares;
+
+public class GlobalExceptionHandlingMiddleware
 {
-    private readonly RequestDelegate _next = next;
-    private readonly ILogger<GlobalExceptionHandlingMiddleware> _logger = logger;
-    private readonly Microsoft.AspNetCore.Hosting.IWebHostEnvironment _environment = environment;
+    private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalExceptionHandlingMiddleware> _logger;
+    private readonly IHostEnvironment _environment;
+
+    public GlobalExceptionHandlingMiddleware(RequestDelegate next, ILogger<GlobalExceptionHandlingMiddleware> logger, IHostEnvironment environment)
+    {
+        _next = next;
+        _logger = logger;
+        _environment = environment;
+    }
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -32,17 +37,18 @@ public class GlobalExceptionHandlingMiddleware(
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = GetStatusCodeForException(ex);
 
-            var problem = new ProblemDetails
+            var errorResponse = new
             {
-                Title = "An error occurred",
-                Status = context.Response.StatusCode,
-                Detail = _environment.IsDevelopment() ? ex.ToString() : null,
-                Instance = context.Request.Path
+                title = "An error occurred",
+                status = context.Response.StatusCode,
+                detail = _environment.IsDevelopment() ? ex.ToString() : null,
+                instance = context.Request.Path.ToString(),
+                traceId = context.TraceIdentifier
             };
 
-            problem.Extensions["traceId"] = context.TraceIdentifier;
-
-            await context.Response.WriteAsJsonAsync(problem);
+            await context.Response.WriteAsync(
+                JsonSerializer.Serialize(errorResponse),
+                context.RequestAborted);
         }
     }
 
@@ -58,5 +64,3 @@ public class GlobalExceptionHandlingMiddleware(
         };
     }
 }
-*/
-
