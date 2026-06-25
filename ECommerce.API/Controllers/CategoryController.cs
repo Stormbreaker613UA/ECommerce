@@ -1,54 +1,107 @@
-using Microsoft.AspNetCore.Mvc;
 using ECommerce.BLL.Services.Interfaces;
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.Category;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
-namespace ECommerce.API.Controllers
+namespace ECommerce.API.Controllers;
+
+[ApiController]
+[Route("api/categories")]
+public class CategoryController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CategoryController : ControllerBase
+    private readonly ICategoryService _categoryService;
+
+    public CategoryController(ICategoryService categoryService)
     {
-        private readonly ICategoryService _categoryService;
+        _categoryService = categoryService;
+    }
 
-        public CategoryController(ICategoryService categoryService)
+    [HttpGet]
+    public async Task<ActionResult<List<GetCategoryDto>>> GetAllAsync()
+    {
+        var categories = await _categoryService.GetAllAsync();
+
+        return Ok(categories);
+    }
+
+    [HttpGet("root")]
+    public async Task<ActionResult<List<GetCategoryDto>>> GetRootCategoriesAsync()
+    {
+        var categories = await _categoryService.GetRootCategoriesAsync();
+
+        return Ok(categories);
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<GetCategoryDto>> GetByIdAsync(Guid id)
+    {
+        var category = await _categoryService.GetByIdAsync(id);
+
+        if (category == null)
         {
-            _categoryService = categoryService;
+            return NotFound();
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
+        return Ok(category);
+    }
+
+    [HttpGet("{id:guid}/children")]
+    public async Task<ActionResult<GetCategoryTreeDto>> GetWithChildrenAsync(Guid id)
+    {
+        var category = await _categoryService.GetWithChildrenAsync(id);
+
+        if (category == null)
         {
-            var categories = await _categoryService.GetAllCategoriesAsync();
-            return Ok(categories);
+            return NotFound();
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            var category = await _categoryService.GetCategoryByIdAsync(id);
-            if (category == null) return NotFound();
-            return Ok(category);
-        }
+        return Ok(category);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Category category)
-        {
-            var created = await _categoryService.AddCategoryAsync(category);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
+    [HttpGet("{parentId:guid}/subcategories")]
+    public async Task<ActionResult<List<GetCategoryDto>>> GetSubCategoriesAsync(Guid parentId)
+    {
+        var categories = await _categoryService.GetSubCategoriesAsync(parentId);
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Category category)
-        {
-            await _categoryService.UpdateCategoryAsync(id, category);
-            return NoContent();
-        }
+        return Ok(categories);
+    }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            await _categoryService.DeleteCategoryAsync(id);
-            return NoContent();
-        }
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<GetCategoryDto>> CreateAsync(CreateCategoryDto dto)
+    {
+        var createdCategory = await _categoryService.CreateAsync(dto);
+
+        return CreatedAtAction(
+            nameof(GetByIdAsync),
+            new { id = createdCategory.Id },
+            createdCategory);
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateAsync(Guid id, UpdateCategoryDto dto)
+    {
+        await _categoryService.UpdateAsync(id, dto);
+
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/parent")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateParentAsync(Guid id, UpdateCategoryParentDto dto)
+    {
+        await _categoryService.UpdateParentAsync(id, dto);
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteAsync(Guid id)
+    {
+        await _categoryService.DeleteAsync(id);
+
+        return NoContent();
     }
 }

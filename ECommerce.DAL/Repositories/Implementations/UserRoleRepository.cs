@@ -36,12 +36,13 @@ public class UserRoleRepository : IUserRoleRepository
     public async Task AddAsync(UserRole role)
     {
         await _dbContext.UserRoles.AddAsync(role);
+        await _dbContext.SaveChangesAsync();
     }
 
-    public Task UpdateAsync(UserRole role)
+    public async Task UpdateAsync(UserRole role)
     {
         _dbContext.UserRoles.Update(role);
-        return Task.CompletedTask;
+        await _dbContext.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(Guid id)
@@ -50,8 +51,11 @@ public class UserRoleRepository : IUserRoleRepository
             .FirstOrDefaultAsync(r => r.Id == id);
 
         if (role == null)
-            throw new KeyNotFoundException("Role not found");
+        {
+            throw new KeyNotFoundException("Role not found.");
+        }
 
         _dbContext.UserRoles.Remove(role);
+        await _dbContext.SaveChangesAsync();
     }
 }

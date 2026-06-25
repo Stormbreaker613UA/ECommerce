@@ -38,7 +38,7 @@ namespace ECommerce.BLL.Services.Implementations
             if (existing == null) throw new KeyNotFoundException("Invoice not found");
 
             existing.OrderId = invoice.OrderId;
-            existing.Amount = invoice.Amount;
+            existing.TotalAmount = invoice.TotalAmount;
 
             await _invoiceRepository.UpdateAsync(existing);
         }

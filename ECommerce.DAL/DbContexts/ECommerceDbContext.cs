@@ -95,7 +95,7 @@ public class ECommerceDbContext : DbContext
                     Id = new Guid("a1b2c3d4-0000-0000-0000-000000000002"),
                     Name = "Customer",
                     Description = "Regular customer with limited access",
-                    IsActive = true,                  
+                    IsActive = true,
                 }
             );
 
@@ -254,18 +254,27 @@ public class ECommerceDbContext : DbContext
         modelBuilder.Entity<Invoice>(i =>
         {
             i.HasKey(x => x.Id);
+
             i.Property(x => x.InvoiceNumber).IsRequired().HasMaxLength(50);
             i.Property(x => x.TotalAmount).IsRequired().HasPrecision(18, 2);
             i.Property(x => x.TaxAmount).IsRequired().HasPrecision(18, 2);
             i.Property(x => x.TaxRate).IsRequired().HasPrecision(5, 2);
+
             i.Property(x => x.BillingEmail).IsRequired().HasMaxLength(256);
             i.Property(x => x.BillingFirstName).IsRequired().HasMaxLength(100);
             i.Property(x => x.BillingLastName).IsRequired().HasMaxLength(100);
             i.Property(x => x.BillingAddress).IsRequired().HasMaxLength(500);
             i.Property(x => x.Notes).HasMaxLength(500);
+
             i.HasIndex(x => x.InvoiceNumber).IsUnique();
-            i.HasIndex(x=> x.OrderId).IsUnique();
+            i.HasIndex(x => x.OrderId).IsUnique();
+
             i.HasQueryFilter(x => !x.IsDeleted);
+
+            i.HasOne(x => x.Order)
+             .WithOne(x => x.Invoice)
+             .HasForeignKey<Invoice>(x => x.OrderId)
+             .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<Review>(r =>
         {
@@ -310,12 +319,34 @@ public class ECommerceDbContext : DbContext
             ps.HasKey(x => x.Id);
             ps.Property(x => x.Status).IsRequired().HasMaxLength(50);
             ps.HasIndex(x => x.Status).IsUnique();
+            ps.HasData(
+                new PaymentStatus { Id = new Guid("c1b2c3d4-0000-0000-0000-000000000001"), Status = "Pending" },
+                new PaymentStatus { Id = new Guid("c1b2c3d4-0000-0000-0000-000000000002"), Status = "Completed" },
+                new PaymentStatus { Id = new Guid("c1b2c3d4-0000-0000-0000-000000000003"), Status = "Failed" }
+            );
         });
         modelBuilder.Entity<PaymentMethod>(pm =>
         {
             pm.HasKey(x => x.Id);
             pm.Property(x => x.Method).IsRequired().HasMaxLength(50);
             pm.HasIndex(x => x.Method).IsUnique();
+            pm.HasData(
+                new PaymentMethod
+                {
+                    Id = new Guid("d1b2c3d4-0000-0000-0000-000000000001"),
+                    Method = "Card"
+                },
+                new PaymentMethod
+                {
+                    Id = new Guid("d1b2c3d4-0000-0000-0000-000000000002"),
+                    Method = "Cash"
+                },
+                new PaymentMethod
+                {
+                    Id = new Guid("d1b2c3d4-0000-0000-0000-000000000003"),
+                    Method = "BankTransfer"
+                }
+            );
         });
     }
 

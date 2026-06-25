@@ -31,22 +31,5 @@ namespace ECommerce.BLL.Services.Implementations
             await _orderRepository.AddAsync(order);
             return order;
         }
-
-        public async Task UpdateOrderAsync(Guid id, Order order)
-        {
-            var existing = await _orderRepository.GetByIdAsync(id);
-            if (existing == null) throw new KeyNotFoundException("Order not found");
-
-            existing.UserId = order.UserId;
-            existing.Total = order.Total;
-            existing.OrderStatus = order.OrderStatus;
-
-            await _orderRepository.UpdateAsync(existing);
-        }
-
-        public async Task DeleteOrderAsync(Guid id)
-        {
-            await _orderRepository.DeleteAsync(id);
-        }
     }
 }

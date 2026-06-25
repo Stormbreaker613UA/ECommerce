@@ -10,7 +10,5 @@ namespace ECommerce.BLL.Services.Interfaces
         Task<List<Order>> GetAllOrdersAsync();
         Task<Order?> GetOrderByIdAsync(Guid id);
         Task<Order> AddOrderAsync(Order order);
-        Task UpdateOrderAsync(Guid id, Order order);
-        Task DeleteOrderAsync(Guid id);
     }
 }

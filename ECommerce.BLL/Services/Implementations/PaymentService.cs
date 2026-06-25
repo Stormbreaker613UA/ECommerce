@@ -38,9 +38,8 @@ namespace ECommerce.BLL.Services.Implementations
             if (existing == null) throw new KeyNotFoundException("Payment not found");
 
             existing.Amount = payment.Amount;
-            existing.Method = payment.Method;
-            existing.Status = payment.Status;
-
+            existing.PaymentMethodId = payment.PaymentMethodId;
+            existing.PaymentStatusId = payment.PaymentStatusId;
             await _paymentRepository.UpdateAsync(existing);
         }
 

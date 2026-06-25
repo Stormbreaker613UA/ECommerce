@@ -1,13 +1,24 @@
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.Category;
 
-namespace ECommerce.BLL.Services.Interfaces
+namespace ECommerce.BLL.Services.Interfaces;
+
+public interface ICategoryService
 {
-    public interface ICategoryService
-    {
-        Task<List<Category>> GetAllCategoriesAsync();
-        Task<Category?> GetCategoryByIdAsync(System.Guid id);
-        Task<Category> AddCategoryAsync(Category category);
-        Task UpdateCategoryAsync(System.Guid id, Category category);
-        Task DeleteCategoryAsync(System.Guid id);
-    }
+    Task<List<GetCategoryDto>> GetAllAsync();
+
+    Task<GetCategoryDto?> GetByIdAsync(Guid id);
+
+    Task<List<GetCategoryDto>> GetRootCategoriesAsync();
+
+    Task<List<GetCategoryDto>> GetSubCategoriesAsync(Guid parentId);
+
+    Task<GetCategoryTreeDto?> GetWithChildrenAsync(Guid id);
+
+    Task<GetCategoryDto> CreateAsync(CreateCategoryDto dto);
+
+    Task UpdateAsync(Guid id, UpdateCategoryDto dto);
+
+    Task UpdateParentAsync(Guid id, UpdateCategoryParentDto dto);
+
+    Task DeleteAsync(Guid id);
 }

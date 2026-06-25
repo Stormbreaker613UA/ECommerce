@@ -100,6 +100,7 @@ else
     });
 }
 
+await app.Services.GetRequiredService<ECommerceDbContext>().Database.MigrateAsync(); // possible problem: if migrations are not applied, this will throw an exception. Consider handling it gracefully.
 
 app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 

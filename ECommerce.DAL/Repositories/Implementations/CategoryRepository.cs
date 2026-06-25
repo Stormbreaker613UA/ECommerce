@@ -24,12 +24,14 @@ public class CategoryRepository : ICategoryRepository
     public async Task<Category?> GetByIdAsync(Guid id)
     {
         return await _dbContext.Categories
+            .Include(c => c.ParentCategory)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
     public async Task<List<Category>> GetRootCategoriesAsync()
     {
         return await _dbContext.Categories
+            .AsNoTracking()
             .Where(c => c.ParentCategoryId == null)
             .ToListAsync();
     }
@@ -37,6 +39,7 @@ public class CategoryRepository : ICategoryRepository
     public async Task<List<Category>> GetSubCategoriesAsync(Guid parentId)
     {
         return await _dbContext.Categories
+            .AsNoTracking()
             .Where(c => c.ParentCategoryId == parentId)
             .ToListAsync();
     }
@@ -44,6 +47,7 @@ public class CategoryRepository : ICategoryRepository
     public async Task<Category?> GetWithChildrenAsync(Guid id)
     {
         return await _dbContext.Categories
+            .Include(c => c.ParentCategory)
             .Include(c => c.SubCategories)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
@@ -51,12 +55,13 @@ public class CategoryRepository : ICategoryRepository
     public async Task AddAsync(Category category)
     {
         await _dbContext.Categories.AddAsync(category);
+        await _dbContext.SaveChangesAsync();
     }
 
-    public Task UpdateAsync(Category category)
+    public async Task UpdateAsync(Category category)
     {
         _dbContext.Categories.Update(category);
-        return Task.CompletedTask;
+        await _dbContext.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(Guid id)
@@ -64,7 +69,12 @@ public class CategoryRepository : ICategoryRepository
         var category = await _dbContext.Categories
             .FirstOrDefaultAsync(c => c.Id == id);
 
-        if (category != null)
-            _dbContext.Categories.Remove(category);
+        if (category == null)
+        {
+            throw new KeyNotFoundException("Category not found.");
+        }
+
+        _dbContext.Categories.Remove(category);
+        await _dbContext.SaveChangesAsync();
     }
 }
