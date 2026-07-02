@@ -1,16 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.Product;
 
-namespace ECommerce.BLL.Services.Interfaces
+namespace ECommerce.BLL.Services.Interfaces;
+
+public interface IProductService
 {
-    public interface IProductService
-    {
-        Task<List<Product>> GetAllProductsAsync();
-        Task<Product?> GetProductByIdAsync(Guid id);
-        Task<Product> AddProductAsync(Product product);
-        Task UpdateProductAsync(Guid id, Product product);
-        Task DeleteProductAsync(Guid id);
-    }
+    Task<List<GetProductDto>> GetAllProductsAsync();
+    Task<GetProductDetailsDto?> GetProductByIdAsync(Guid id);
+    Task<List<GetProductDto>> GetProductsByCategoryAsync(Guid categoryId);
+    Task<List<GetProductDto>> SearchProductsAsync(string keyword);
+    Task<GetProductDetailsDto> AddProductAsync(CreateProductDto dto);
+    Task<List<GetProductDto>> GetAvailableProductsAsync();
+    Task UpdateProductAsync(Guid id, UpdateProductDto dto);
+    Task DeleteProductAsync(Guid id);
 }

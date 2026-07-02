@@ -27,6 +27,7 @@ public class ProductRepository : IProductRepository
     {
         return await _dbContext.Products
             .Include(p => p.Category)
+            .Include(p => p.ProductImages)
             .ToListAsync();
     }
 
@@ -34,6 +35,7 @@ public class ProductRepository : IProductRepository
     {
         return await _dbContext.Products
             .Where(p => p.CategoryId == categoryId)
+            .Include(p => p.Category)
             .Include(p => p.ProductImages)
             .ToListAsync();
     }
@@ -41,27 +43,32 @@ public class ProductRepository : IProductRepository
     public async Task<List<Product>> SearchAsync(string keyword)
     {
         return await _dbContext.Products
-            .Where(p => p.Name.Contains(keyword) ||
-                        p.Description.Contains(keyword))
-            .ToListAsync();
+       .Include(p => p.Category)
+       .Include(p => p.ProductImages)
+       .Where(p => p.Name.Contains(keyword) ||
+                   p.Description.Contains(keyword))
+       .ToListAsync();
     }
 
     public async Task<List<Product>> GetAvailableAsync()
     {
         return await _dbContext.Products
-            .Where(p => p.StockQuantity > 0)
-            .ToListAsync();
+        .Include(p => p.Category)
+        .Include(p => p.ProductImages)
+        .Where(p => p.StockQuantity > 0)
+        .ToListAsync();
     }
 
     public async Task AddAsync(Product product)
     {
         await _dbContext.Products.AddAsync(product);
+        await _dbContext.SaveChangesAsync();
     }
 
-    public Task UpdateAsync(Product product)
+    public async Task UpdateAsync(Product product)
     {
         _dbContext.Products.Update(product);
-        return Task.CompletedTask;
+        await _dbContext.SaveChangesAsync();
     }
 
     public async Task DeleteAsync(Guid id)
@@ -72,5 +79,6 @@ public class ProductRepository : IProductRepository
             throw new KeyNotFoundException("Product not found");
 
         _dbContext.Products.Remove(product);
+        await _dbContext.SaveChangesAsync();
     }
 }
