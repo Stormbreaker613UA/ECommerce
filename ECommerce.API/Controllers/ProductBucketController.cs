@@ -1,48 +1,59 @@
-using Microsoft.AspNetCore.Mvc;
 using ECommerce.BLL.Services.Interfaces;
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.ProductBucket;
+using Microsoft.AspNetCore.Mvc;
 
-namespace ECommerce.API.Controllers
+namespace ECommerce.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ProductBucketController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class ProductBucketController : ControllerBase
+    private readonly IProductBucketService _productBucketService;
+
+    public ProductBucketController(IProductBucketService productBucketService)
     {
-        private readonly IProductBucketService _productBucketService;
+        _productBucketService = productBucketService;
+    }
 
-        public ProductBucketController(IProductBucketService productBucketService)
-        {
-            _productBucketService = productBucketService;
-        }
+    [HttpGet("{userId:guid}")]
+    public async Task<IActionResult> GetBucket(Guid userId)
+    {
+        var bucket = await _productBucketService.GetBucketAsync(userId);
+        return Ok(bucket);
+    }
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetByUser(Guid userId)
-        {
-            var bucket = await _productBucketService.GetByUserIdAsync(userId);
-            if (bucket == null) return NotFound();
-            return Ok(bucket);
-        }
+    [HttpPost("{userId:guid}/items")]
+    public async Task<IActionResult> AddProduct(
+        Guid userId,
+        [FromBody] AddProductToBucketDto dto)
+    {
+        await _productBucketService.AddProductAsync(userId, dto);
+        return Ok();
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ProductBucket productBucket)
-        {
-            await _productBucketService.AddProductBucketAsync(productBucket);
-            return CreatedAtAction(nameof(GetByUser), new { userId = productBucket.UserId }, productBucket);
-        }
+    [HttpPut("{userId:guid}/items/{productId:guid}")]
+    public async Task<IActionResult> UpdateProduct(
+        Guid userId,
+        Guid productId,
+        [FromBody] UpdateProductBucketItemDto dto)
+    {
+        await _productBucketService.UpdateProductAsync(userId, productId, dto);
+        return NoContent();
+    }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ProductBucket productBucket)
-        {
-            productBucket.Id = id;
-            await _productBucketService.UpdateProductBucketAsync(productBucket);
-            return NoContent();
-        }
+    [HttpDelete("{userId:guid}/items/{productId:guid}")]
+    public async Task<IActionResult> RemoveProduct(
+        Guid userId,
+        Guid productId)
+    {
+        await _productBucketService.RemoveProductAsync(userId, productId);
+        return NoContent();
+    }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            await _productBucketService.DeleteProductBucketAsync(id);
-            return NoContent();
-        }
+    [HttpDelete("{userId:guid}")]
+    public async Task<IActionResult> ClearBucket(Guid userId)
+    {
+        await _productBucketService.ClearBucketAsync(userId);
+        return NoContent();
     }
 }

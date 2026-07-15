@@ -18,19 +18,22 @@ public class AuthService : IAuthService
     private readonly IConfiguration _configuration;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly ITokenCacheBucket _tokenCache;
+    private readonly IProductBucketRepository _productBucketRepository;
 
     public AuthService(
         IUserRepository userRepository,
         IUserRoleRepository userRoleRepository,
         IConfiguration configuration,
         IPasswordHasher<User> passwordHasher,
-        ITokenCacheBucket tokenCache)
+        ITokenCacheBucket tokenCache,
+        IProductBucketRepository productBucketRepository)
     {
         _userRepository = userRepository;
         _userRoleRepository = userRoleRepository;
         _configuration = configuration;
         _passwordHasher = passwordHasher;
         _tokenCache = tokenCache;
+        _productBucketRepository = productBucketRepository;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterUserDto dto)
@@ -64,6 +67,14 @@ public class AuthService : IAuthService
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
 
         await _userRepository.AddAsync(user);
+
+        var productBucket = new ProductBucket
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id
+        };
+        
+        await _productBucketRepository.AddAsync(productBucket);
 
         var token = GenerateJwtToken(user);
         var tokenLifetime = GetTokenLifetime();

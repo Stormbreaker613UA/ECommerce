@@ -45,7 +45,7 @@ namespace ECommerce.BLL.Services.Implementations
 
         public async Task DeletePaymentAsync(Guid id)
         {
-            await _paymentRepository.DeleteAsync(id);
+            throw new NotImplementedException(); // todo
         }
     }
 }

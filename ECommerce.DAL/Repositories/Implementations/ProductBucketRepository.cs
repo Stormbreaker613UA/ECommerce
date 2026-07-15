@@ -19,6 +19,7 @@ public class ProductBucketRepository : IProductBucketRepository
         return await _dbContext.ProductBuckets
             .Include(b => b.ProductBucketItems)
                 .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.ProductImages)
             .FirstOrDefaultAsync(b => b.UserId == userId);
     }
 
@@ -27,22 +28,55 @@ public class ProductBucketRepository : IProductBucketRepository
         return await _dbContext.ProductBuckets
             .Include(b => b.ProductBucketItems)
                 .ThenInclude(i => i.Product)
+                    .ThenInclude(p => p.ProductImages)
             .FirstOrDefaultAsync(b => b.Id == bucketId);
+    }
+
+    public async Task<ProductBucketItem?> GetItemAsync(Guid bucketId, Guid productId)
+    {
+        return await _dbContext.ProductBucketItems
+            .Include(i => i.Product)
+                .ThenInclude(p => p.ProductImages)
+            .FirstOrDefaultAsync(i =>
+                i.ProductBucketId == bucketId &&
+                i.ProductId == productId);
     }
 
     public async Task AddAsync(ProductBucket bucket)
     {
         await _dbContext.ProductBuckets.AddAsync(bucket);
+        await _dbContext.SaveChangesAsync();
     }
 
-    public Task UpdateAsync(ProductBucket bucket)
+    public async Task UpdateAsync(ProductBucket bucket)
     {
         _dbContext.ProductBuckets.Update(bucket);
-        return Task.CompletedTask;
+        await _dbContext.SaveChangesAsync();
     }
 
-    public Task DeleteAsync(Guid id)
+    public async Task AddItemAsync(ProductBucketItem item)
     {
-        throw new NotImplementedException(); // TODO: Implement delete logic if needed
+        await _dbContext.ProductBucketItems.AddAsync(item);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task RemoveItemAsync(ProductBucketItem item)
+    {
+        _dbContext.ProductBucketItems.Remove(item);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task ClearAsync(Guid bucketId)
+    {
+        var bucket = await _dbContext.ProductBuckets
+            .Include(b => b.ProductBucketItems)
+            .FirstOrDefaultAsync(b => b.Id == bucketId);
+
+        if (bucket == null)
+            throw new KeyNotFoundException("Shopping cart not found.");
+
+        _dbContext.ProductBucketItems.RemoveRange(bucket.ProductBucketItems);
+
+        await _dbContext.SaveChangesAsync();
     }
 }

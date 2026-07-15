@@ -1,15 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ECommerce.DAL.Entities;
+﻿using ECommerce.DAL.Entities;
 
-namespace ECommerce.DAL.Repositories.Interfaces
+namespace ECommerce.DAL.Repositories.Interfaces;
+
+public interface IProductBucketRepository
 {
-    public interface IProductBucketRepository
-    {
-        Task<ProductBucket?> GetByUserIdAsync(Guid userId);
-        Task AddAsync(ProductBucket bucket);
-        Task UpdateAsync(ProductBucket bucket);
-        Task DeleteAsync(Guid id);
-    }
+    Task<ProductBucket?> GetByUserIdAsync(Guid userId);
+    Task<ProductBucket?> GetByIdAsync(Guid bucketId);
+    Task<ProductBucketItem?> GetItemAsync(Guid bucketId, Guid productId);
+    Task AddAsync(ProductBucket bucket);
+    Task UpdateAsync(ProductBucket bucket);
+    Task AddItemAsync(ProductBucketItem item);
+    Task RemoveItemAsync(ProductBucketItem item);
+    Task ClearAsync(Guid bucketId);
 }
