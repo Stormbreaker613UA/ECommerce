@@ -1,57 +1,162 @@
 using ECommerce.BLL.Services.Interfaces;
+using ECommerce.DAL.DTOs.Address;
 using ECommerce.DAL.Entities;
 using ECommerce.DAL.Repositories.Interfaces;
 
-namespace ECommerce.BLL.Services.Implementations
+namespace ECommerce.BLL.Services.Implementations;
+
+public class AddressService : IAddressService
 {
-    public class AddressService : IAddressService
+    private readonly IAddressRepository _addressRepository;
+    private readonly IUserRepository _userRepository;
+
+    public AddressService(
+        IAddressRepository addressRepository,
+        IUserRepository userRepository)
     {
-        private readonly IAddressRepository _addressRepository;
+        _addressRepository = addressRepository;
+        _userRepository = userRepository;
+    }
 
-        public AddressService(IAddressRepository addressRepository)
+    public async Task<List<GetAddressDto>> GetUserAddressesAsync(Guid userId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (user == null)
+            throw new KeyNotFoundException("User not found.");
+
+        var addresses = await _addressRepository.GetByUserIdAsync(userId);
+
+        return addresses.Select(MapToDto).ToList();
+    }
+
+    public async Task<GetAddressDto?> GetByIdAsync(Guid id)
+    {
+        var address = await _addressRepository.GetByIdAsync(id);
+
+        return address == null
+            ? null
+            : MapToDto(address);
+    }
+
+    public async Task<GetAddressDto> CreateAsync(Guid userId, CreateAddressDto dto)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (user == null)
+            throw new KeyNotFoundException("User not found.");
+
+        if (dto.IsDefault)
         {
-            _addressRepository = addressRepository;
+            var currentDefault = await _addressRepository.GetDefaultAsync(userId);
+
+            if (currentDefault != null)
+            {
+                currentDefault.IsDefault = false;
+                await _addressRepository.UpdateAsync(currentDefault);
+            }
         }
 
-        public async Task<List<Address>> GetAllAddressesAsync()
+        var address = new Address
         {
-            return await _addressRepository.GetAllAsync();
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Street = dto.Street,
+            City = dto.City,
+            State = dto.State,
+            PostalCode = dto.PostalCode,
+            Country = dto.Country,
+            IsDefault = dto.IsDefault
+        };
+
+        await _addressRepository.AddAsync(address);
+
+        return MapToDto(address);
+    }
+
+    public async Task UpdateAsync(Guid userId, Guid addressId, UpdateAddressDto dto)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (user == null)
+            throw new KeyNotFoundException("User not found.");
+
+        var address = await _addressRepository.GetByIdAsync(addressId);
+
+        if (address == null)
+            throw new KeyNotFoundException("Address not found.");
+
+        if (address.UserId != userId)
+            throw new InvalidOperationException("Address does not belong to the user.");
+
+        if (dto.IsDefault == true)
+        {
+            var currentDefault = await _addressRepository.GetDefaultAsync(userId);
+
+            if (currentDefault != null && currentDefault.Id != address.Id)
+            {
+                currentDefault.IsDefault = false;
+                await _addressRepository.UpdateAsync(currentDefault);
+            }
+
+            address.IsDefault = true;
         }
 
-        public async Task<Address?> GetAddressByIdAsync(Guid id)
+        if (!string.IsNullOrWhiteSpace(dto.Street))
+            address.Street = dto.Street;
+
+        if (!string.IsNullOrWhiteSpace(dto.City))
+            address.City = dto.City;
+
+        if (dto.State != null)
+            address.State = dto.State;
+
+        if (!string.IsNullOrWhiteSpace(dto.PostalCode))
+            address.PostalCode = dto.PostalCode;
+
+        if (!string.IsNullOrWhiteSpace(dto.Country))
+            address.Country = dto.Country;
+
+        await _addressRepository.UpdateAsync(address);
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        await _addressRepository.DeleteAsync(id);
+    }
+
+    public async Task SetDefaultAsync(Guid userId, Guid addressId)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (user == null)
+            throw new KeyNotFoundException("User not found.");
+
+        var addresses = await _addressRepository.GetByUserIdAsync(userId);
+
+        var address = addresses.FirstOrDefault(a => a.Id == addressId);
+
+        if (address == null)
+            throw new KeyNotFoundException("Address not found.");
+
+        foreach (var item in addresses)
         {
-            return await _addressRepository.GetByIdAsync(id);
+            item.IsDefault = item.Id == addressId;
+            await _addressRepository.UpdateAsync(item);
         }
+    }
 
-        public async Task<List<Address>> GetAddressesByUserIdAsync(Guid userId)
+    private static GetAddressDto MapToDto(Address address)
+    {
+        return new GetAddressDto
         {
-            return await _addressRepository.GetByUserIdAsync(userId);
-        }
-
-        public async Task<Address> AddAddressAsync(Address address)
-        {
-            await _addressRepository.AddAsync(address);
-            return address;
-        }
-
-        public async Task UpdateAddressAsync(Guid id, Address address)
-        {
-            var existing = await _addressRepository.GetByIdAsync(id);
-            if (existing == null) throw new KeyNotFoundException("Address not found");
-
-            existing.Street = address.Street;
-            existing.City = address.City;
-            existing.State = address.State;
-            existing.PostalCode = address.PostalCode;
-            existing.Country = address.Country;
-            existing.IsDefault = address.IsDefault;
-
-            await _addressRepository.UpdateAsync(existing);
-        }
-
-        public async Task DeleteAddressAsync(Guid id)
-        {
-            await _addressRepository.DeleteAsync(id);
-        }
+            Id = address.Id,
+            Street = address.Street,
+            City = address.City,
+            State = address.State,
+            PostalCode = address.PostalCode,
+            Country = address.Country,
+            IsDefault = address.IsDefault
+        };
     }
 }

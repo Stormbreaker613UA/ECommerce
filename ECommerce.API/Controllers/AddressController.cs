@@ -1,61 +1,77 @@
-using Microsoft.AspNetCore.Mvc;
 using ECommerce.BLL.Services.Interfaces;
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.Address;
+using Microsoft.AspNetCore.Mvc;
 
-namespace ECommerce.API.Controllers
+namespace ECommerce.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AddressController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AddressController : ControllerBase
+    private readonly IAddressService _addressService;
+
+    public AddressController(IAddressService addressService)
     {
-        private readonly IAddressService _addressService;
+        _addressService = addressService;
+    }
 
-        public AddressController(IAddressService addressService)
-        {
-            _addressService = addressService;
-        }
+    [HttpGet("user/{userId:guid}")]
+    public async Task<IActionResult> GetUserAddresses(Guid userId)
+    {
+        var addresses = await _addressService.GetUserAddressesAsync(userId);
+        return Ok(addresses);
+    }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var addresses = await _addressService.GetAllAddressesAsync();
-            return Ok(addresses);
-        }
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var address = await _addressService.GetByIdAsync(id);
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            var address = await _addressService.GetAddressByIdAsync(id);
-            if (address == null) return NotFound();
-            return Ok(address);
-        }
+        if (address == null)
+            return NotFound();
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetByUserId(Guid userId)
-        {
-            var addresses = await _addressService.GetAddressesByUserIdAsync(userId);
-            return Ok(addresses);
-        }
+        return Ok(address);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Address address)
-        {
-            var created = await _addressService.AddAddressAsync(address);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
+    [HttpPost("{userId:guid}")]
+    public async Task<IActionResult> Create(
+        Guid userId,
+        [FromBody] CreateAddressDto dto)
+    {
+        var address = await _addressService.CreateAsync(userId, dto);
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Address address)
-        {
-            await _addressService.UpdateAddressAsync(id, address);
-            return NoContent();
-        }
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = address.Id },
+            address);
+    }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            await _addressService.DeleteAddressAsync(id);
-            return NoContent();
-        }
+    [HttpPut("{userId:guid}/{addressId:guid}")]
+    public async Task<IActionResult> Update(
+        Guid userId,
+        Guid addressId,
+        [FromBody] UpdateAddressDto dto)
+    {
+        await _addressService.UpdateAsync(userId, addressId, dto);
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _addressService.DeleteAsync(id);
+
+        return NoContent();
+    }
+
+    [HttpPatch("{userId:guid}/{addressId:guid}/default")]
+    public async Task<IActionResult> SetDefault(
+        Guid userId,
+        Guid addressId)
+    {
+        await _addressService.SetDefaultAsync(userId, addressId);
+
+        return NoContent();
     }
 }

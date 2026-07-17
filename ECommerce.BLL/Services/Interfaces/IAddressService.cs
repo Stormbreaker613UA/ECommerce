@@ -1,17 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.Address;
 
-namespace ECommerce.BLL.Services.Interfaces
+namespace ECommerce.BLL.Services.Interfaces;
+
+public interface IAddressService
 {
-    public interface IAddressService
-    {
-        Task<List<Address>> GetAllAddressesAsync();
-        Task<Address?> GetAddressByIdAsync(Guid id);
-        Task<List<Address>> GetAddressesByUserIdAsync(Guid userId);
-        Task<Address> AddAddressAsync(Address address);
-        Task UpdateAddressAsync(Guid id, Address address);
-        Task DeleteAddressAsync(Guid id);
-    }
+    Task<List<GetAddressDto>> GetUserAddressesAsync(Guid userId);
+
+    Task<GetAddressDto?> GetByIdAsync(Guid id);
+
+    Task<GetAddressDto> CreateAsync(Guid userId, CreateAddressDto dto);
+
+    Task UpdateAsync(Guid userId, Guid addressId, UpdateAddressDto dto);
+
+    Task DeleteAsync(Guid id);
+
+    Task SetDefaultAsync(Guid userId, Guid addressId);
 }
