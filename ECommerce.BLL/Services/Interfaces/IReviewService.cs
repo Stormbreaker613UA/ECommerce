@@ -1,18 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.Review;
 
-namespace ECommerce.BLL.Services.Interfaces
+namespace ECommerce.BLL.Services.Interfaces;
+
+
+public interface IReviewService
 {
-    public interface IReviewService
-    {
-        Task<List<Review>> GetAllReviewsAsync();
-        Task<Review?> GetReviewByIdAsync(Guid id);
-        Task<List<Review>> GetReviewsByProductIdAsync(Guid productId);
-        Task<List<Review>> GetReviewsByUserIdAsync(Guid userId);
-        Task<Review> AddReviewAsync(Review review);
-        Task UpdateReviewAsync(Guid id, Review review);
-        Task DeleteReviewAsync(Guid id);
-    }
+    Task<List<GetReviewDto>> GetAllReviewsAsync();
+
+    Task<GetReviewDto?> GetReviewByIdAsync(Guid id);
+
+    Task<List<GetReviewDto>> GetReviewsByProductIdAsync(Guid productId);
+
+    Task<List<GetReviewDto>> GetReviewsByUserIdAsync(Guid userId);
+
+    Task<GetReviewDto> AddReviewAsync(Guid userId, AddReviewDto dto);
+
+    Task UpdateReviewAsync(Guid reviewId, Guid userId, UpdateReviewDto dto);
+
+    Task DeleteReviewAsync(Guid reviewId, Guid userId);
 }

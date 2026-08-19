@@ -37,6 +37,12 @@ namespace ECommerce.DAL.Repositories.Implementations
             return await _dbContext.Reviews.Where(r => r.UserId == userId).ToListAsync();
         }
 
+        public async Task<Review?> GetByUserAndProductAsync( Guid userId, Guid productId)
+        {
+            return await _dbContext.Reviews.FirstOrDefaultAsync(x => x.UserId == userId && x.ProductId == productId);
+        }
+
+
         public async Task AddAsync(Review review)
         {
             await _dbContext.Reviews.AddAsync(review);

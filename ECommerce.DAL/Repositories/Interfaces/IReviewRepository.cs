@@ -11,6 +11,7 @@ namespace ECommerce.DAL.Repositories.Interfaces
         Task<Review?> GetByIdAsync(Guid id);
         Task<List<Review>> GetByProductIdAsync(Guid productId);
         Task<List<Review>> GetByUserIdAsync(Guid userId);
+        Task<Review?> GetByUserAndProductAsync(Guid userId, Guid productId);
         Task AddAsync(Review review);
         Task UpdateAsync(Review review);
         Task DeleteAsync(Guid id);
