@@ -1,54 +1,72 @@
-using Microsoft.AspNetCore.Mvc;
 using ECommerce.BLL.Services.Interfaces;
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.Order;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
-namespace ECommerce.API.Controllers
+namespace ECommerce.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class OrderController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class OrderController : ControllerBase
+    private readonly IOrderService _orderService;
+
+    public OrderController(IOrderService orderService)
     {
-        private readonly IOrderService _orderService;
+        _orderService = orderService;
+    }
 
-        public OrderController(IOrderService orderService)
-        {
-            _orderService = orderService;
-        }
+    [HttpGet]
+    public async Task<IActionResult> GetMyOrders()
+    {
+        var userId = GetCurrentUserId();
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            var orders = await _orderService.GetAllOrdersAsync();
-            return Ok(orders);
-        }
+        var orders =
+            await _orderService.GetUserOrdersAsync(userId);
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            var order = await _orderService.GetOrderByIdAsync(id);
-            if (order == null) return NotFound();
-            return Ok(order);
-        }
+        return Ok(orders);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Order order)
-        {
-            var created = await _orderService.AddOrderAsync(order);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var order =
+            await _orderService.GetOrderByIdAsync(id);
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Order order)
-        {
-            await _orderService.UpdateOrderAsync(id, order);
-            return NoContent();
-        }
+        if (order == null)
+            return NotFound();
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            await _orderService.DeleteOrderAsync(id);
-            return NoContent();
-        }
+        return Ok(order);
+    }
+
+    [HttpPost("checkout")]
+    public async Task<IActionResult> Checkout([FromBody] CheckoutDto dto)
+    {
+        var userId = GetCurrentUserId();
+
+        var order = await _orderService.CheckoutAsync(userId, dto);
+
+        return Ok(order);
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        await _orderService.CancelOrderAsync(GetCurrentUserId(), id);
+
+        return NoContent();
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdStr, out var userId))
+            throw new UnauthorizedAccessException(
+                "Invalid user token.");
+
+        return userId;
     }
 }

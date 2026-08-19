@@ -16,19 +16,33 @@ public class OrderRepository : IOrderRepository
 
     public async Task<Order?> GetByIdAsync(Guid id)
     {
-        return await _dbContext.Orders.FindAsync(id);
+        return await _dbContext.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(i => i.Product)
+            .Include(o => o.OrderStatus)
+            .FirstOrDefaultAsync(o => o.Id == id);
     }
 
     public async Task<List<Order>> GetByUserIdAsync(Guid userId)
     {
         return await _dbContext.Orders
             .Where(o => o.UserId == userId)
+            .Include(o => o.OrderStatus)
             .ToListAsync();
     }
 
     public async Task<List<Order>> GetAllAsync()
     {
-        return await _dbContext.Orders.ToListAsync();
+        return await _dbContext.Orders
+            .Include(o => o.OrderStatus)
+            .ToListAsync();
+    }
+
+    public async Task<List<Order>> GetByStatusAsync(Guid statusId)
+    {
+        return await _dbContext.Orders
+            .Where(o => o.OrderStatusId == statusId)
+            .ToListAsync();
     }
 
     public async Task AddAsync(Order order)
@@ -37,10 +51,21 @@ public class OrderRepository : IOrderRepository
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task<List<Order>> GetByStatusAsync(Guid orderStatusId)
+    public async Task UpdateAsync(Order order)
     {
-        return await _dbContext.Orders
-            .Where(o => o.OrderStatusId == orderStatusId)
-            .ToListAsync();
+        _dbContext.Orders.Update(order);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(Guid id)
+    {
+        var order = await _dbContext.Orders.FindAsync(id);
+
+        if (order == null)
+            throw new KeyNotFoundException("Order not found.");
+
+        _dbContext.Orders.Remove(order);
+
+        await _dbContext.SaveChangesAsync();
     }
 }

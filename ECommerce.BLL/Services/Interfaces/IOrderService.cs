@@ -1,14 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ECommerce.DAL.Entities;
+using ECommerce.DAL.DTOs.Order;
 
 namespace ECommerce.BLL.Services.Interfaces
 {
     public interface IOrderService
     {
-        Task<List<Order>> GetAllOrdersAsync();
-        Task<Order?> GetOrderByIdAsync(Guid id);
-        Task<Order> AddOrderAsync(Order order);
+        Task<List<GetOrderDto>> GetAllOrdersAsync();
+        Task<GetOrderDto?> GetOrderByIdAsync(Guid orderId);
+        Task<List<GetOrderDto>> GetUserOrdersAsync(Guid userId);
+        Task<GetOrderDto> CheckoutAsync(Guid userId, CheckoutDto checkoutDto);
+        Task CancelOrderAsync(Guid userId, Guid orderId);
     }
 }
