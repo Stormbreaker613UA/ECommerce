@@ -189,7 +189,9 @@ public class ECommerceDbContext : DbContext
         {
             pbi.HasKey(x => x.Id);
             pbi.Property(x => x.Quantity).IsRequired().HasDefaultValue(1);
-            pbi.HasIndex(x => new { x.ProductBucketId, x.ProductId }).IsUnique();
+            pbi.HasIndex(x => new { x.ProductBucketId, x.ProductId })
+               .IsUnique()
+               .HasFilter("\"IsDeleted\" = false");
             pbi.HasQueryFilter(x => !x.IsDeleted);
             pbi.HasOne(x => x.Product)
                .WithMany(x => x.ProductBucketItems)

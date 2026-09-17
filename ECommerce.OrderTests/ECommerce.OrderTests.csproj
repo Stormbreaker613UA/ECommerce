@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ECommerce.DAL\ECommerce.DAL.csproj" />
+  </ItemGroup>
+
+  <!--
+    The focused tests compile the current Order service/controller/middleware
+    sources directly. Referencing the BLL/API projects would also pull in the
+    repository's unrelated, known Invoice compiler mismatch and would prevent
+    this repair suite from building independently.
+  -->
+  <ItemGroup>
+    <Compile Include="..\ECommerce.BLL\Services\Interfaces\IOrderService.cs" Link="Source\IOrderService.cs" />
+    <Compile Include="..\ECommerce.BLL\Services\Implementations\OrderService.cs" Link="Source\OrderService.cs" />
+    <Compile Include="..\ECommerce.API\Controllers\OrderController.cs" Link="Source\OrderController.cs" />
+    <Compile Include="..\ECommerce.API\Middlewares\GlobalExceptionHandlingMiddleware.cs" Link="Source\GlobalExceptionHandlingMiddleware.cs" />
+  </ItemGroup>
+
+</Project>

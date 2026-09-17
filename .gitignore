@@ -365,3 +365,6 @@ FodyWeavers.xsd
 /restore_points/restore-before-ef-fix/ECommerce.API.ECommerce.API.csproj.bak
 /restore_points/restore-before-ef-fix/ECommerce.BLL.ECommerce.BLL.csproj.bak
 /restore_points/restore-before-ef-fix/ECommerce.DAL.ECommerce.DAL.csproj.bak
+
+# Codex/AI-only working documentation; do not publish.
+/docs/

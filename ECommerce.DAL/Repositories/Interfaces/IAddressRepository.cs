@@ -6,7 +6,9 @@ public interface IAddressRepository
 {
     Task<List<Address>> GetByUserIdAsync(Guid userId);
 
-    Task<Address?> GetByIdAsync(Guid id);
+    Task<Address?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
 
     Task<Address?> GetDefaultAsync(Guid userId);
 

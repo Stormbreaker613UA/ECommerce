@@ -19,11 +19,13 @@ public class UserRepository : IUserRepository
         .Include(x => x.UserRole)
         .ToListAsync();
     }
-    public async Task<User?> GetByIdAsync(Guid id)
+    public async Task<User?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
         return await _dbContext.Users
         .Include(x => x.UserRole)
-        .FirstOrDefaultAsync(x => x.Id == id);
+        .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
     public async Task AddAsync(User user)
     {

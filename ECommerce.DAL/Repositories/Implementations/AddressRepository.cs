@@ -19,9 +19,12 @@ public class AddressRepository : IAddressRepository
         return await _dbContext.Addresses.Where(a => a.UserId == userId).OrderByDescending(a => a.IsDefault).ToListAsync();
     }
 
-    public async Task<Address?> GetByIdAsync(Guid id)
+    public async Task<Address?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Addresses.FirstOrDefaultAsync(a => a.Id == id);
+        return await _dbContext.Addresses
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
     }
 
     public async Task<Address?> GetDefaultAsync(Guid userId)

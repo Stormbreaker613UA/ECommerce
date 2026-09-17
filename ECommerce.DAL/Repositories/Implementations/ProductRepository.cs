@@ -14,13 +14,15 @@ public class ProductRepository : IProductRepository
         _dbContext = dbContext;
     }
 
-    public async Task<Product?> GetByIdAsync(Guid id)
+    public async Task<Product?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
         return await _dbContext.Products
             .Include(p => p.Category)
             .Include(p => p.ProductImages)
             .Include(p => p.Reviews)
-            .FirstOrDefaultAsync(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
     }
 
     public async Task<List<Product>> GetAllAsync()
@@ -80,5 +82,62 @@ public class ProductRepository : IProductRepository
 
         _dbContext.Products.Remove(product);
         await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task<bool> TryReduceStockAsync(
+        Guid productId,
+        int quantity,
+        CancellationToken cancellationToken = default)
+    {
+        if (quantity <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(quantity),
+                "Stock reduction quantity must be greater than zero.");
+
+        var updatedAt = DateTime.UtcNow;
+        var affectedRows = await _dbContext.Products
+            .Where(product =>
+                product.Id == productId &&
+                product.StockQuantity >= quantity)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(
+                        product => product.StockQuantity,
+                        product => product.StockQuantity - quantity)
+                    .SetProperty(product => product.UpdatedAt, updatedAt),
+                cancellationToken);
+
+        return affectedRows == 1;
+    }
+
+    public async Task RestoreStockAsync(
+        Guid productId,
+        int quantity,
+        CancellationToken cancellationToken = default)
+    {
+        if (quantity <= 0)
+            throw new ArgumentOutOfRangeException(
+                nameof(quantity),
+                "Stock restoration quantity must be greater than zero.");
+
+        var updatedAt = DateTime.UtcNow;
+        // Cancellation must restore the exact physical row even when the
+        // product was soft-deleted after checkout. This narrowly scoped
+        // IgnoreQueryFilters applies only to Products; Order and OrderItem
+        // filters remain active in the cancellation query.
+        var affectedRows = await _dbContext.Products
+            .IgnoreQueryFilters()
+            .Where(product => product.Id == productId)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(
+                        product => product.StockQuantity,
+                        product => product.StockQuantity + quantity)
+                    .SetProperty(product => product.UpdatedAt, updatedAt),
+                cancellationToken);
+
+        if (affectedRows != 1)
+            throw new KeyNotFoundException(
+                $"Product '{productId}' was not found while restoring stock.");
     }
 }

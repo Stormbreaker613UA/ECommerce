@@ -14,18 +14,26 @@ public class OrderStatusRepository : IOrderStatusRepository
         _dbContext = dbContext;
     }
 
-    public async Task<OrderStatus?> GetByIdAsync(Guid id)
+    public async Task<OrderStatus?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.OrderStatuses .FirstOrDefaultAsync(x => x.Id == id);
+        return await _dbContext.OrderStatuses
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public async Task<OrderStatus?> GetByNameAsync(string name)
+    public async Task<OrderStatus?> GetByNameAsync(
+        string name,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.OrderStatuses .FirstOrDefaultAsync(x => x.Name == name);
+        return await _dbContext.OrderStatuses
+            .FirstOrDefaultAsync(x => x.Name == name, cancellationToken);
     }
 
-    public async Task<List<OrderStatus>> GetAllAsync()
+    public async Task<List<OrderStatus>> GetAllAsync(
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.OrderStatuses .ToListAsync();
+        return await _dbContext.OrderStatuses
+            .ToListAsync(cancellationToken);
     }
 }

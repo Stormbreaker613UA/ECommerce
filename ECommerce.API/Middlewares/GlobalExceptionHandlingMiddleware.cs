@@ -24,6 +24,44 @@ public class GlobalExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // The client disconnected or the request was cancelled by the
+            // server. There is no valid response to write at this point.
+            _logger.LogDebug(
+                "Request {TraceId} was cancelled because the request token was aborted.",
+                context.TraceIdentifier);
+        }
+        catch (OperationCanceledException ex)
+        {
+            if (context.Response.HasStarted)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Request {TraceId} was cancelled after the response started.",
+                    context.TraceIdentifier);
+                throw;
+            }
+
+            _logger.LogWarning(
+                ex,
+                "Request {TraceId} timed out or was cancelled before completion.",
+                context.TraceIdentifier);
+
+            await WriteErrorResponseAsync(
+                context,
+                StatusCodes.Status408RequestTimeout,
+                ex);
+        }
+        catch (Exception ex) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // A disconnected request has no client that can receive an error
+            // response. Avoid turning a transport cancellation into a 500.
+            _logger.LogDebug(
+                ex,
+                "Request {TraceId} ended after its request token was aborted.",
+                context.TraceIdentifier);
+        }
         catch (Exception ex)
         {
             if (context.Response.HasStarted)
@@ -34,22 +72,36 @@ public class GlobalExceptionHandlingMiddleware
 
             _logger.LogError(ex, "Unhandled exception");
 
-            context.Response.ContentType = "application/json";
-            context.Response.StatusCode = GetStatusCodeForException(ex);
-
-            var errorResponse = new
-            {
-                title = "An error occurred",
-                status = context.Response.StatusCode,
-                detail = _environment.IsDevelopment() ? ex.ToString() : null,
-                instance = context.Request.Path.ToString(),
-                traceId = context.TraceIdentifier
-            };
-
-            await context.Response.WriteAsync(
-                JsonSerializer.Serialize(errorResponse),
-                context.RequestAborted);
+            await WriteErrorResponseAsync(
+                context,
+                GetStatusCodeForException(ex),
+                ex);
         }
+    }
+
+    private async Task WriteErrorResponseAsync(
+        HttpContext context,
+        int statusCode,
+        Exception exception)
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = statusCode;
+
+        var errorResponse = new
+        {
+            title = "An error occurred",
+            status = statusCode,
+            detail = _environment.IsDevelopment() ? exception.ToString() : null,
+            instance = context.Request.Path.ToString(),
+            traceId = context.TraceIdentifier
+        };
+
+        // Do not reuse RequestAborted here. Request cancellation is handled
+        // above without attempting a response write, and internal cancellation
+        // is deliberately mapped to 408 with a non-cancelled write token.
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(errorResponse),
+            CancellationToken.None);
     }
 
     private int GetStatusCodeForException(Exception ex)
