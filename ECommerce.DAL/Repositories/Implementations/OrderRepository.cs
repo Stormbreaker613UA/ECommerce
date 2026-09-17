@@ -2,6 +2,8 @@
 using ECommerce.DAL.Entities;
 using ECommerce.DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using System.Data;
 
 namespace ECommerce.DAL.Repositories.Implementations;
 
@@ -70,6 +72,48 @@ public class OrderRepository : IOrderRepository
         }
 
         return order;
+    }
+
+    public async Task<bool> LockOrderRowAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var transaction = _dbContext.Database.CurrentTransaction?.GetDbTransaction()
+            ?? throw new InvalidOperationException(
+                "An active transaction is required before locking an order.");
+
+        var connection = _dbContext.Database.GetDbConnection();
+        var wasOpen = connection.State == ConnectionState.Open;
+
+        if (!wasOpen)
+            await connection.OpenAsync(cancellationToken);
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = """
+                SELECT 1
+                FROM "Orders"
+                WHERE "Id" = @order_id
+                  AND "IsDeleted" = FALSE
+                FOR UPDATE
+                """;
+
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@order_id";
+            parameter.DbType = DbType.Guid;
+            parameter.Value = id;
+            command.Parameters.Add(parameter);
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            return result is not null && result != DBNull.Value;
+        }
+        finally
+        {
+            if (!wasOpen)
+                await connection.CloseAsync();
+        }
     }
 
     public async Task<List<Order>> GetByUserIdAsync(

@@ -33,6 +33,8 @@
   <ItemGroup>
     <Compile Include="..\ECommerce.BLL\Services\Interfaces\IOrderService.cs" Link="Source\IOrderService.cs" />
     <Compile Include="..\ECommerce.BLL\Services\Implementations\OrderService.cs" Link="Source\OrderService.cs" />
+    <Compile Include="..\ECommerce.BLL\Services\Interfaces\IPaymentService.cs" Link="Source\IPaymentService.cs" />
+    <Compile Include="..\ECommerce.BLL\Services\Implementations\PaymentService.cs" Link="Source\PaymentService.cs" />
     <Compile Include="..\ECommerce.API\Controllers\OrderController.cs" Link="Source\OrderController.cs" />
     <Compile Include="..\ECommerce.API\Middlewares\GlobalExceptionHandlingMiddleware.cs" Link="Source\GlobalExceptionHandlingMiddleware.cs" />
   </ItemGroup>

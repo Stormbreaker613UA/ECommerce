@@ -17,6 +17,10 @@ public interface IOrderRepository
         Guid id,
         CancellationToken cancellationToken = default);
 
+    Task<bool> LockOrderRowAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
     Task<List<Order>> GetByUserIdAsync(
         Guid userId,
         CancellationToken cancellationToken = default);

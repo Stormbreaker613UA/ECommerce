@@ -23,6 +23,7 @@ public static class OrderServiceFactory
             new ProductRepository(context),
             productBucketRepository ?? new ProductBucketRepository(context),
             new OrderStatusRepository(context),
+            new PaymentRepository(context),
             NullLogger<OrderService>.Instance);
     }
 }

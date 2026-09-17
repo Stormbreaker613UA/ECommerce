@@ -300,8 +300,27 @@ public class ECommerceDbContext : DbContext
         {
             p.HasKey(x => x.Id);
             p.Property(x => x.Amount).IsRequired().HasPrecision(18, 2);
-            p.Property(x => x.PaidAt).IsRequired();
+            p.Property(x => x.Currency).IsRequired();
+            p.Property(x => x.IdempotencyKey).HasMaxLength(200);
+            p.Property(x => x.CompletionIdempotencyKey).HasMaxLength(200);
+            p.Property(x => x.PaidAt).IsRequired(false);
             p.HasQueryFilter(x => !x.IsDeleted);
+
+            // Failed attempts remain auditable and may be retried. PostgreSQL
+            // enforces one Pending/Completed attempt per order.
+            p.HasIndex(x => x.OrderId)
+                .IsUnique()
+                .HasFilter(
+                    $"\"PaymentStatusId\" IN ('{PaymentStatusCatalog.PendingId}', '{PaymentStatusCatalog.CompletedId}')");
+            p.HasIndex(x => x.IdempotencyKey)
+                .IsUnique()
+                .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            p.HasIndex(x => x.CompletionIdempotencyKey)
+                .IsUnique()
+                .HasFilter("\"CompletionIdempotencyKey\" IS NOT NULL");
+            p.HasIndex(x => x.TransactionId)
+                .IsUnique()
+                .HasFilter("\"TransactionId\" IS NOT NULL");
 
             p.HasOne(x => x.Order)
              .WithMany(x => x.Payments)
@@ -322,9 +341,9 @@ public class ECommerceDbContext : DbContext
             ps.Property(x => x.Status).IsRequired().HasMaxLength(50);
             ps.HasIndex(x => x.Status).IsUnique();
             ps.HasData(
-                new PaymentStatus { Id = new Guid("c1b2c3d4-0000-0000-0000-000000000001"), Status = "Pending" },
-                new PaymentStatus { Id = new Guid("c1b2c3d4-0000-0000-0000-000000000002"), Status = "Completed" },
-                new PaymentStatus { Id = new Guid("c1b2c3d4-0000-0000-0000-000000000003"), Status = "Failed" }
+                new PaymentStatus { Id = PaymentStatusCatalog.PendingId, Status = PaymentStatusCatalog.Pending },
+                new PaymentStatus { Id = PaymentStatusCatalog.CompletedId, Status = PaymentStatusCatalog.Completed },
+                new PaymentStatus { Id = PaymentStatusCatalog.FailedId, Status = PaymentStatusCatalog.Failed }
             );
         });
         modelBuilder.Entity<PaymentMethod>(pm =>

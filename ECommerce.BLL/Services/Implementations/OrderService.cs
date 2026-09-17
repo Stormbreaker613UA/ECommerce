@@ -19,6 +19,7 @@ public class OrderService : IOrderService
     private readonly IProductRepository _productRepository;
     private readonly IProductBucketRepository _productBucketRepository;
     private readonly IOrderStatusRepository _orderStatusRepository;
+    private readonly IPaymentRepository _paymentRepository;
     private readonly ILogger<OrderService> _logger;
 
     public OrderService(
@@ -29,6 +30,7 @@ public class OrderService : IOrderService
         IProductRepository productRepository,
         IProductBucketRepository productBucketRepository,
         IOrderStatusRepository orderStatusRepository,
+        IPaymentRepository paymentRepository,
         ILogger<OrderService> logger)
     {
         _dbContext = dbContext;
@@ -38,6 +40,7 @@ public class OrderService : IOrderService
         _productRepository = productRepository;
         _productBucketRepository = productBucketRepository;
         _orderStatusRepository = orderStatusRepository;
+        _paymentRepository = paymentRepository;
         _logger = logger;
     }
 
@@ -278,6 +281,13 @@ public class OrderService : IOrderService
             transaction = await _dbContext.Database
                 .BeginTransactionAsync(cancellationToken);
 
+            if (!await _orderRepository.LockOrderRowAsync(
+                    orderId,
+                    cancellationToken))
+            {
+                throw new KeyNotFoundException("Order not found.");
+            }
+
             var order = await _orderRepository.GetByIdForCancellationAsync(
                 orderId,
                 cancellationToken);
@@ -303,6 +313,33 @@ public class OrderService : IOrderService
                 cancellationToken)
                 ?? throw new InvalidOperationException(
                     "Cancelled status not found.");
+
+            var activePayment = await _paymentRepository.GetByOrderIdAsync(
+                orderId,
+                cancellationToken);
+
+            if (activePayment?.PaymentStatusId == PaymentStatusCatalog.CompletedId)
+            {
+                throw new InvalidOperationException(
+                    "The order cannot be cancelled after payment completion; a refund workflow is required.");
+            }
+
+            if (activePayment?.PaymentStatusId == PaymentStatusCatalog.PendingId)
+            {
+                var paymentFailed = await _paymentRepository.TryMarkFailedAsync(
+                    activePayment.Id,
+                    PaymentStatusCatalog.PendingId,
+                    PaymentStatusCatalog.FailedId,
+                    DateTime.UtcNow,
+                    userId,
+                    cancellationToken);
+
+                if (paymentFailed != 1)
+                {
+                    throw new InvalidOperationException(
+                        "Payment status changed before order cancellation completed.");
+                }
+            }
 
             foreach (var item in order.OrderItems)
             {

@@ -430,6 +430,10 @@ namespace ECommerce.DAL.Migrations
                     b.Property<string>("CardLast4")
                         .HasColumnType("text");
 
+                    b.Property<string>("CompletionIdempotencyKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -449,13 +453,17 @@ namespace ECommerce.DAL.Migrations
                     b.Property<string>("GatewayResponse")
                         .HasColumnType("text");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("PaidAt")
+                    b.Property<DateTime?>("PaidAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("PaymentMethodId")
@@ -475,11 +483,25 @@ namespace ECommerce.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("CompletionIdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("\"CompletionIdempotencyKey\" IS NOT NULL");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("\"IdempotencyKey\" IS NOT NULL");
+
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasFilter("\"PaymentStatusId\" IN ('c1b2c3d4-0000-0000-0000-000000000001', 'c1b2c3d4-0000-0000-0000-000000000002')");
 
                     b.HasIndex("PaymentMethodId");
 
                     b.HasIndex("PaymentStatusId");
+
+                    b.HasIndex("TransactionId")
+                        .IsUnique()
+                        .HasFilter("\"TransactionId\" IS NOT NULL");
 
                     b.ToTable("Payments");
                 });
@@ -501,6 +523,23 @@ namespace ECommerce.DAL.Migrations
                         .IsUnique();
 
                     b.ToTable("PaymentMethods");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("d1b2c3d4-0000-0000-0000-000000000001"),
+                            Method = "Card"
+                        },
+                        new
+                        {
+                            Id = new Guid("d1b2c3d4-0000-0000-0000-000000000002"),
+                            Method = "Cash"
+                        },
+                        new
+                        {
+                            Id = new Guid("d1b2c3d4-0000-0000-0000-000000000003"),
+                            Method = "BankTransfer"
+                        });
                 });
 
             modelBuilder.Entity("ECommerce.DAL.Entities.PaymentStatus", b =>
@@ -520,6 +559,23 @@ namespace ECommerce.DAL.Migrations
                         .IsUnique();
 
                     b.ToTable("PaymentStatuses");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("c1b2c3d4-0000-0000-0000-000000000001"),
+                            Status = "Pending"
+                        },
+                        new
+                        {
+                            Id = new Guid("c1b2c3d4-0000-0000-0000-000000000002"),
+                            Status = "Completed"
+                        },
+                        new
+                        {
+                            Id = new Guid("c1b2c3d4-0000-0000-0000-000000000003"),
+                            Status = "Failed"
+                        });
                 });
 
             modelBuilder.Entity("ECommerce.DAL.Entities.Product", b =>

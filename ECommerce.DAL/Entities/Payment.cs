@@ -10,6 +10,14 @@
         public decimal Amount { get; set; }
         public string Currency { get; set; } = "USD";
 
+        // The creation key is supplied by the client and is immutable after creation.
+        // It is nullable only for legacy rows created before the Payment foundation.
+        public string? IdempotencyKey { get; set; }
+
+        // A separate key makes completion retries idempotent without reusing the
+        // creation key for a different operation.
+        public string? CompletionIdempotencyKey { get; set; }
+
         // Gateway data
         public string? TransactionId { get; set; }  // from Stripe/LiqPay/WayForPay
         public string? GatewayResponse { get; set; }  // raw JSON response
