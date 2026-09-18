@@ -1,6 +1,7 @@
 using ECommerce.API.Middlewares;
 using ECommerce.BLL.Services.Implementations;
 using ECommerce.BLL.Services.Interfaces;
+using ECommerce.BLL.Options;
 using ECommerce.DAL.Caches.Implementation;
 using ECommerce.DAL.Caches.Interface;
 using ECommerce.DAL.DbContexts;
@@ -19,6 +20,10 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<ECommerceDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddOptions<CommerceOptions>()
+    .BindConfiguration(CommerceOptions.SectionName)
+    .ValidateOnStart();
+builder.Services.AddSingleton<Microsoft.Extensions.Options.IValidateOptions<CommerceOptions>, CommerceOptionsValidator>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();

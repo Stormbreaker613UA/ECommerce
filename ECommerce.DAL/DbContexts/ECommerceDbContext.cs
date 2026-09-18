@@ -165,6 +165,7 @@ public class ECommerceDbContext : DbContext
         {
             pi.HasKey(x => x.Id);
             pi.Property(x => x.ImageUrl).IsRequired().HasMaxLength(500);
+            pi.HasQueryFilter(x => !x.Product.IsDeleted);
             pi.HasOne(x => x.Product)
               .WithMany(x => x.ProductImages)
               .HasForeignKey(x => x.ProductId)
@@ -207,6 +208,11 @@ public class ECommerceDbContext : DbContext
             o.HasKey(x => x.Id);
             o.Property(x => x.OrderDate).IsRequired();
             o.Property(x => x.TotalAmount).IsRequired().HasPrecision(18, 2);
+            o.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            o.ToTable(table => table.HasCheckConstraint(
+                "CK_Orders_Currency_UppercaseIso4217",
+                "\"Currency\" ~ '^[A-Z]{3}$'"));
+            o.Property(x => x.BillingAddressSnapshot).HasMaxLength(500);
             o.HasQueryFilter(x => !x.IsDeleted);
             o.HasOne(x => x.User)
              .WithMany(x => x.Orders)
@@ -258,6 +264,12 @@ public class ECommerceDbContext : DbContext
             i.HasKey(x => x.Id);
 
             i.Property(x => x.InvoiceNumber).IsRequired().HasMaxLength(50);
+            i.Property(x => x.PaymentTransactionId).IsRequired().HasMaxLength(100);
+            i.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            i.ToTable(table => table.HasCheckConstraint(
+                "CK_Invoices_Currency_UppercaseIso4217",
+                "\"Currency\" ~ '^[A-Z]{3}$'"));
+            i.Property(x => x.SubtotalAmount).IsRequired().HasPrecision(18, 2);
             i.Property(x => x.TotalAmount).IsRequired().HasPrecision(18, 2);
             i.Property(x => x.TaxAmount).IsRequired().HasPrecision(18, 2);
             i.Property(x => x.TaxRate).IsRequired().HasPrecision(5, 2);
@@ -270,13 +282,30 @@ public class ECommerceDbContext : DbContext
 
             i.HasIndex(x => x.InvoiceNumber).IsUnique();
             i.HasIndex(x => x.OrderId).IsUnique();
-
-            i.HasQueryFilter(x => !x.IsDeleted);
+            i.HasIndex(x => x.PaymentId).IsUnique();
 
             i.HasOne(x => x.Order)
              .WithOne(x => x.Invoice)
              .HasForeignKey<Invoice>(x => x.OrderId)
              .OnDelete(DeleteBehavior.Restrict);
+
+            i.HasOne(x => x.Payment)
+             .WithOne(x => x.Invoice)
+             .HasForeignKey<Invoice>(x => x.PaymentId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            i.HasMany(x => x.Items)
+             .WithOne(x => x.Invoice)
+             .HasForeignKey(x => x.InvoiceId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<InvoiceItem>(ii =>
+        {
+            ii.HasKey(x => x.Id);
+            ii.Property(x => x.ProductName).IsRequired().HasMaxLength(200);
+            ii.Property(x => x.Quantity).IsRequired();
+            ii.Property(x => x.UnitPrice).IsRequired().HasPrecision(18, 2);
+            ii.Property(x => x.LineTotal).IsRequired().HasPrecision(18, 2);
         });
         modelBuilder.Entity<Review>(r =>
         {
@@ -300,7 +329,10 @@ public class ECommerceDbContext : DbContext
         {
             p.HasKey(x => x.Id);
             p.Property(x => x.Amount).IsRequired().HasPrecision(18, 2);
-            p.Property(x => x.Currency).IsRequired();
+            p.Property(x => x.Currency).IsRequired().HasMaxLength(3);
+            p.ToTable(table => table.HasCheckConstraint(
+                "CK_Payments_Currency_UppercaseIso4217",
+                "\"Currency\" ~ '^[A-Z]{3}$'"));
             p.Property(x => x.IdempotencyKey).HasMaxLength(200);
             p.Property(x => x.CompletionIdempotencyKey).HasMaxLength(200);
             p.Property(x => x.PaidAt).IsRequired(false);
@@ -383,6 +415,7 @@ public class ECommerceDbContext : DbContext
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderStatus> OrderStatuses => Set<OrderStatus>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentStatus> PaymentStatuses => Set<PaymentStatus>();

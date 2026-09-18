@@ -1,4 +1,5 @@
 using ECommerce.BLL.Services.Interfaces;
+using ECommerce.BLL.Options;
 using ECommerce.DAL.DbContexts;
 using ECommerce.DAL.DTOs.Payment;
 using ECommerce.DAL.Entities;
@@ -12,7 +13,6 @@ namespace ECommerce.BLL.Services.Implementations;
 
 public class PaymentService : IPaymentService
 {
-    private const string SupportedCurrency = "USD";
     private const int MaxIdempotencyKeyLength = 200;
     private const string CreationIdempotencyIndex =
         "IX_Payments_IdempotencyKey";
@@ -22,17 +22,20 @@ public class PaymentService : IPaymentService
     private readonly ECommerceDbContext _dbContext;
     private readonly IPaymentRepository _paymentRepository;
     private readonly IOrderRepository _orderRepository;
+    private readonly IInvoiceService _invoiceService;
     private readonly ILogger<PaymentService> _logger;
 
     public PaymentService(
         ECommerceDbContext dbContext,
         IPaymentRepository paymentRepository,
         IOrderRepository orderRepository,
+        IInvoiceService invoiceService,
         ILogger<PaymentService> logger)
     {
         _dbContext = dbContext;
         _paymentRepository = paymentRepository;
         _orderRepository = orderRepository;
+        _invoiceService = invoiceService;
         _logger = logger;
     }
 
@@ -67,9 +70,9 @@ public class PaymentService : IPaymentService
         ArgumentNullException.ThrowIfNull(request);
 
         var idempotencyKey = NormalizeIdempotencyKey(request.IdempotencyKey);
-        var currency = NormalizeCurrency(request.Currency);
         ValidateCreateInput(request, idempotencyKey);
 
+        var currency = string.Empty;
         IDbContextTransaction? transaction = null;
 
         try
@@ -83,6 +86,15 @@ public class PaymentService : IPaymentService
             {
                 throw new KeyNotFoundException("Order not found.");
             }
+
+            var order = await _orderRepository.GetByIdAsync(
+                request.OrderId,
+                cancellationToken);
+
+            if (order == null || order.UserId != userId)
+                throw new KeyNotFoundException("Order not found.");
+
+            currency = CurrencyCode.Normalize(order.Currency);
 
             var existingByKey = await _paymentRepository
                 .GetByIdempotencyKeyAsync(idempotencyKey, cancellationToken);
@@ -98,13 +110,6 @@ public class PaymentService : IPaymentService
                 await transaction.CommitAsync(cancellationToken);
                 return MapToDto(existingByKey);
             }
-
-            var order = await _orderRepository.GetByIdAsync(
-                request.OrderId,
-                cancellationToken);
-
-            if (order == null || order.UserId != userId)
-                throw new KeyNotFoundException("Order not found.");
 
             EnsureOrderEligibleForPayment(order);
             ValidateAmount(request.Amount, order.TotalAmount);
@@ -321,6 +326,9 @@ public class PaymentService : IPaymentService
                         "The completion idempotency key was already used for another payment.");
                 }
 
+                await _invoiceService.EnsureInvoiceForCompletedPaymentAsync(
+                    existingByKey.Id,
+                    cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 return MapToDto(existingByKey);
             }
@@ -332,6 +340,17 @@ public class PaymentService : IPaymentService
 
             if (payment.PaymentStatusId == PaymentStatusCatalog.CompletedId)
             {
+                if (string.IsNullOrWhiteSpace(payment.CompletionIdempotencyKey))
+                {
+                    // Explicit legacy reconciliation: this path can only issue
+                    // from retained checkout snapshots, never mutable sources.
+                    await _invoiceService.EnsureInvoiceForCompletedPaymentAsync(
+                        payment.Id,
+                        cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    return MapToDto(payment);
+                }
+
                 throw new InvalidOperationException(
                     "The payment has already been completed.");
             }
@@ -366,6 +385,9 @@ public class PaymentService : IPaymentService
                 if (current.PaymentStatusId == PaymentStatusCatalog.CompletedId &&
                     current.CompletionIdempotencyKey == idempotencyKey)
                 {
+                    await _invoiceService.EnsureInvoiceForCompletedPaymentAsync(
+                        current.Id,
+                        cancellationToken);
                     await transaction.CommitAsync(cancellationToken);
                     return MapToDto(current);
                 }
@@ -380,6 +402,9 @@ public class PaymentService : IPaymentService
                 ?? throw new InvalidOperationException(
                     "The completed payment could not be reloaded.");
 
+            await _invoiceService.EnsureInvoiceForCompletedPaymentAsync(
+                completedPayment.Id,
+                cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
             _logger.LogInformation(
@@ -556,19 +581,6 @@ public class PaymentService : IPaymentService
         {
             throw new ArgumentException(
                 $"IdempotencyKey must be {MaxIdempotencyKeyLength} characters or fewer.");
-        }
-
-        return normalized;
-    }
-
-    private static string NormalizeCurrency(string? value)
-    {
-        var normalized = value?.Trim().ToUpperInvariant() ?? string.Empty;
-
-        if (!string.Equals(normalized, SupportedCurrency, StringComparison.Ordinal))
-        {
-            throw new ArgumentException(
-                $"Currency must be {SupportedCurrency} for the current payment foundation.");
         }
 
         return normalized;

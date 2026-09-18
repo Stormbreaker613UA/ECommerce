@@ -32,10 +32,14 @@
   -->
   <ItemGroup>
     <Compile Include="..\ECommerce.BLL\Services\Interfaces\IOrderService.cs" Link="Source\IOrderService.cs" />
+    <Compile Include="..\ECommerce.BLL\Options\CommerceOptions.cs" Link="Source\CommerceOptions.cs" />
     <Compile Include="..\ECommerce.BLL\Services\Implementations\OrderService.cs" Link="Source\OrderService.cs" />
     <Compile Include="..\ECommerce.BLL\Services\Interfaces\IPaymentService.cs" Link="Source\IPaymentService.cs" />
     <Compile Include="..\ECommerce.BLL\Services\Implementations\PaymentService.cs" Link="Source\PaymentService.cs" />
+    <Compile Include="..\ECommerce.BLL\Services\Interfaces\IInvoiceService.cs" Link="Source\IInvoiceService.cs" />
+    <Compile Include="..\ECommerce.BLL\Services\Implementations\InvoiceService.cs" Link="Source\InvoiceService.cs" />
     <Compile Include="..\ECommerce.API\Controllers\OrderController.cs" Link="Source\OrderController.cs" />
+    <Compile Include="..\ECommerce.API\Controllers\InvoiceController.cs" Link="Source\InvoiceController.cs" />
     <Compile Include="..\ECommerce.API\Middlewares\GlobalExceptionHandlingMiddleware.cs" Link="Source\GlobalExceptionHandlingMiddleware.cs" />
   </ItemGroup>
 

@@ -1,4 +1,5 @@
 using ECommerce.BLL.Services.Interfaces;
+using ECommerce.BLL.Options;
 using ECommerce.DAL.DbContexts;
 using ECommerce.DAL.DTOs.Order;
 using ECommerce.DAL.DTOs.ProductBucket;
@@ -7,6 +8,7 @@ using ECommerce.DAL.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ECommerce.BLL.Services.Implementations;
 
@@ -20,6 +22,7 @@ public class OrderService : IOrderService
     private readonly IProductBucketRepository _productBucketRepository;
     private readonly IOrderStatusRepository _orderStatusRepository;
     private readonly IPaymentRepository _paymentRepository;
+    private readonly IOptions<CommerceOptions> _commerceOptions;
     private readonly ILogger<OrderService> _logger;
 
     public OrderService(
@@ -31,6 +34,7 @@ public class OrderService : IOrderService
         IProductBucketRepository productBucketRepository,
         IOrderStatusRepository orderStatusRepository,
         IPaymentRepository paymentRepository,
+        IOptions<CommerceOptions> commerceOptions,
         ILogger<OrderService> logger)
     {
         _dbContext = dbContext;
@@ -41,6 +45,7 @@ public class OrderService : IOrderService
         _productBucketRepository = productBucketRepository;
         _orderStatusRepository = orderStatusRepository;
         _paymentRepository = paymentRepository;
+        _commerceOptions = commerceOptions;
         _logger = logger;
     }
 
@@ -133,6 +138,9 @@ public class OrderService : IOrderService
                 UserId = userId,
                 OrderDate = DateTime.UtcNow,
                 TotalAmount = totalAmount,
+                Currency = CurrencyCode.Normalize(_commerceOptions.Value.Currency),
+                BillingAddressId = address.Id,
+                BillingAddressSnapshot = FormatAddress(address),
                 OrderStatusId = pendingStatus.Id,
                 OrderStatus = pendingStatus
             };
@@ -475,5 +483,14 @@ public class OrderService : IOrderService
                 })
                 .ToList()
         };
+    }
+
+    private static string FormatAddress(Address address)
+    {
+        var state = string.IsNullOrWhiteSpace(address.State)
+            ? string.Empty
+            : $", {address.State}";
+
+        return $"{address.Street}, {address.City}{state}, {address.PostalCode}, {address.Country}";
     }
 }

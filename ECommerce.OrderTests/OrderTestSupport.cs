@@ -1,4 +1,5 @@
 using ECommerce.BLL.Services.Implementations;
+using ECommerce.BLL.Options;
 using ECommerce.DAL.DbContexts;
 using ECommerce.DAL.DTOs.Order;
 using ECommerce.DAL.DTOs.ProductBucket;
@@ -6,6 +7,7 @@ using ECommerce.DAL.Entities;
 using ECommerce.DAL.Repositories.Implementations;
 using ECommerce.DAL.Repositories.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace ECommerce.OrderTests;
 
@@ -13,7 +15,8 @@ public static class OrderServiceFactory
 {
     public static OrderService Create(
         ECommerceDbContext context,
-        IProductBucketRepository? productBucketRepository = null)
+        IProductBucketRepository? productBucketRepository = null,
+        string storeCurrency = "USD")
     {
         return new OrderService(
             context,
@@ -24,6 +27,7 @@ public static class OrderServiceFactory
             productBucketRepository ?? new ProductBucketRepository(context),
             new OrderStatusRepository(context),
             new PaymentRepository(context),
+            Options.Create(new CommerceOptions { Currency = storeCurrency }),
             NullLogger<OrderService>.Instance);
     }
 }

@@ -8,7 +8,7 @@
 
         // Amount snapshot
         public decimal Amount { get; set; }
-        public string Currency { get; set; } = "USD";
+        public string Currency { get; set; } = string.Empty;
 
         // The creation key is supplied by the client and is immutable after creation.
         // It is nullable only for legacy rows created before the Payment foundation.
@@ -30,6 +30,7 @@
 
         // Navigation
         public virtual Order Order { get; set; } = null!;
+        public virtual Invoice? Invoice { get; set; }
         public virtual PaymentStatus PaymentStatus { get; set; } = null!;
         public virtual PaymentMethod PaymentMethod { get; set; } = null!;
     }
