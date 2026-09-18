@@ -34,9 +34,7 @@ public sealed class OrderRepairTests
         {
             scenario = await OrderTestData.SeedAsync(context);
             order = await OrderServiceFactory.Create(context)
-                .CheckoutAsync(
-                    scenario.UserId,
-                    new CheckoutDto { AddressId = scenario.AddressId });
+                .CheckoutAsync(scenario.UserId, new CheckoutDto { AddressId = scenario.AddressId }, TestContext.Current.CancellationToken);
         }
 
         Assert.Equal("Pending", order.Status);
@@ -48,7 +46,7 @@ public sealed class OrderRepairTests
             .Where(item =>
                 item.ProductBucketId == scenario.BucketId &&
                 item.ProductId == scenario.ProductId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Single(historicalItems);
         Assert.True(historicalItems[0].IsDeleted);
@@ -56,12 +54,12 @@ public sealed class OrderRepairTests
 
         var persistedOrder = await verifyContext.Orders
             .Include(item => item.OrderItems)
-            .SingleAsync(item => item.Id == order.Id);
+            .SingleAsync(item => item.Id == order.Id, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Single(persistedOrder.OrderItems);
         Assert.Equal(scenario.Quantity, persistedOrder.OrderItems.First().Quantity);
 
         var productAfterCheckout = await verifyContext.Products
-            .SingleAsync(item => item.Id == scenario.ProductId);
+            .SingleAsync(item => item.Id == scenario.ProductId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(
             scenario.InitialStock - scenario.Quantity,
             productAfterCheckout.StockQuantity);
@@ -98,14 +96,14 @@ public sealed class OrderRepairTests
                 IsDeleted = true,
                 DeletedAt = DateTime.UtcNow
             });
-        await verifyContext.SaveChangesAsync();
+        await verifyContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var allRows = await verifyContext.ProductBucketItems
             .IgnoreQueryFilters()
             .Where(item =>
                 item.ProductBucketId == scenario.BucketId &&
                 item.ProductId == scenario.ProductId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(4, allRows.Count);
         Assert.Single(allRows, item => !item.IsDeleted);
@@ -122,7 +120,7 @@ public sealed class OrderRepairTests
         });
 
         await Assert.ThrowsAsync<DbUpdateException>(
-            () => duplicateContext.SaveChangesAsync());
+            () => duplicateContext.SaveChangesAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -159,23 +157,21 @@ public sealed class OrderRepairTests
                 mutatingRepository);
 
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => service.CheckoutAsync(
-                    scenario.UserId,
-                    new CheckoutDto { AddressId = scenario.AddressId }));
+                () => service.CheckoutAsync(scenario.UserId, new CheckoutDto { AddressId = scenario.AddressId }, TestContext.Current.CancellationToken));
         }
 
         await using var verifyContext = _fixture.CreateContext();
         Assert.Equal(
             0,
-            await verifyContext.Orders.CountAsync());
+            await verifyContext.Orders.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
 
         var product = await verifyContext.Products
-            .SingleAsync(item => item.Id == scenario.ProductId);
+            .SingleAsync(item => item.Id == scenario.ProductId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(scenario.InitialStock, product.StockQuantity);
 
         var activeItems = await verifyContext.ProductBucketItems
             .Where(item => item.ProductBucketId == scenario.BucketId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(2, activeItems.Count);
         Assert.Contains(activeItems, item => item.ProductId == scenario.ProductId);
         Assert.Contains(activeItems, item => item.ProductId == scenario.SecondProductId);
@@ -209,10 +205,10 @@ public sealed class OrderRepairTests
 
         await using var verifyContext = _fixture.CreateContext();
         var product = await verifyContext.Products
-            .SingleAsync(item => item.Id == scenario.ProductId);
+            .SingleAsync(item => item.Id == scenario.ProductId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(0, product.StockQuantity);
         Assert.True(product.StockQuantity >= 0);
-        Assert.Equal(1, await verifyContext.Orders.CountAsync());
+        Assert.Equal(1, await verifyContext.Orders.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -227,9 +223,7 @@ public sealed class OrderRepairTests
         {
             scenario = await OrderTestData.SeedAsync(checkoutContext);
             var order = await OrderServiceFactory.Create(checkoutContext)
-                .CheckoutAsync(
-                    scenario.UserId,
-                    new CheckoutDto { AddressId = scenario.AddressId });
+                .CheckoutAsync(scenario.UserId, new CheckoutDto { AddressId = scenario.AddressId }, TestContext.Current.CancellationToken);
             orderId = order.Id;
         }
 
@@ -248,18 +242,18 @@ public sealed class OrderRepairTests
         {
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => OrderServiceFactory.Create(repeatedContext)
-                    .CancelOrderAsync(scenario.UserId, orderId));
+                    .CancelOrderAsync(scenario.UserId, orderId, TestContext.Current.CancellationToken));
         }
 
         await using var verifyContext = _fixture.CreateContext();
         var product = await verifyContext.Products
-            .SingleAsync(item => item.Id == scenario.ProductId);
+            .SingleAsync(item => item.Id == scenario.ProductId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(scenario.InitialStock, product.StockQuantity);
         Assert.NotNull(product.UpdatedAt);
 
         var orderEntity = await verifyContext.Orders
             .Include(item => item.OrderStatus)
-            .SingleAsync(item => item.Id == orderId);
+            .SingleAsync(item => item.Id == orderId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal("Cancelled", orderEntity.OrderStatus.Name);
         Assert.NotNull(orderEntity.UpdatedAt);
     }
@@ -276,36 +270,34 @@ public sealed class OrderRepairTests
         {
             scenario = await OrderTestData.SeedAsync(checkoutContext);
             orderId = (await OrderServiceFactory.Create(checkoutContext)
-                .CheckoutAsync(
-                    scenario.UserId,
-                    new CheckoutDto { AddressId = scenario.AddressId })).Id;
+                .CheckoutAsync(scenario.UserId, new CheckoutDto { AddressId = scenario.AddressId }, TestContext.Current.CancellationToken)).Id;
         }
 
         await using (var deleteContext = _fixture.CreateContext())
         {
             var product = await deleteContext.Products
-                .SingleAsync(item => item.Id == scenario.ProductId);
+                .SingleAsync(item => item.Id == scenario.ProductId, cancellationToken: TestContext.Current.CancellationToken);
             deleteContext.Products.Remove(product);
-            await deleteContext.SaveChangesAsync();
+            await deleteContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var cancelContext = _fixture.CreateContext())
         {
             await OrderServiceFactory.Create(cancelContext)
-                .CancelOrderAsync(scenario.UserId, orderId);
+                .CancelOrderAsync(scenario.UserId, orderId, TestContext.Current.CancellationToken);
         }
 
         await using var verifyContext = _fixture.CreateContext();
         var productAfterCancellation = await verifyContext.Products
             .IgnoreQueryFilters()
-            .SingleAsync(item => item.Id == scenario.ProductId);
+            .SingleAsync(item => item.Id == scenario.ProductId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(productAfterCancellation.IsDeleted);
         Assert.Equal(scenario.InitialStock, productAfterCancellation.StockQuantity);
         Assert.NotNull(productAfterCancellation.UpdatedAt);
 
         var order = await verifyContext.Orders
             .Include(item => item.OrderStatus)
-            .SingleAsync(item => item.Id == orderId);
+            .SingleAsync(item => item.Id == orderId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal("Cancelled", order.OrderStatus.Name);
     }
 
@@ -323,9 +315,7 @@ public sealed class OrderRepairTests
                 checkoutContext,
                 includeSecondCartItem: true);
             orderId = (await OrderServiceFactory.Create(checkoutContext)
-                .CheckoutAsync(
-                    scenario.UserId,
-                    new CheckoutDto { AddressId = scenario.AddressId })).Id;
+                .CheckoutAsync(scenario.UserId, new CheckoutDto { AddressId = scenario.AddressId }, TestContext.Current.CancellationToken)).Id;
         }
 
         await using (var deleteContext = _fixture.CreateContext())
@@ -334,31 +324,31 @@ public sealed class OrderRepairTests
                 ALTER TABLE "OrderItems" DROP CONSTRAINT IF EXISTS "FK_OrderItems_Products_ProductId";
                 ALTER TABLE "ProductBucketItems" DROP CONSTRAINT IF EXISTS "FK_ProductBucketItems_Products_ProductId";
                 DELETE FROM "Products" WHERE "Id" = {scenario.SecondProductId};
-                """);
+                """, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         await using (var cancelContext = _fixture.CreateContext())
         {
             await Assert.ThrowsAsync<KeyNotFoundException>(
                 () => OrderServiceFactory.Create(cancelContext)
-                    .CancelOrderAsync(scenario.UserId, orderId));
+                    .CancelOrderAsync(scenario.UserId, orderId, TestContext.Current.CancellationToken));
         }
 
         await using var verifyContext = _fixture.CreateContext();
         var order = await verifyContext.Orders
             .Include(item => item.OrderStatus)
-            .SingleAsync(item => item.Id == orderId);
+            .SingleAsync(item => item.Id == orderId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal("Pending", order.OrderStatus.Name);
 
         var remainingProduct = await verifyContext.Products
-            .SingleAsync(item => item.Id == scenario.ProductId);
+            .SingleAsync(item => item.Id == scenario.ProductId, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(
             scenario.InitialStock - scenario.Quantity,
             remainingProduct.StockQuantity);
 
         Assert.False(await verifyContext.Products
             .IgnoreQueryFilters()
-            .AnyAsync(item => item.Id == scenario.SecondProductId));
+            .AnyAsync(item => item.Id == scenario.SecondProductId, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -373,22 +363,16 @@ public sealed class OrderRepairTests
         {
             scenario = await OrderTestData.SeedAsync(checkoutContext);
             orderId = (await OrderServiceFactory.Create(checkoutContext)
-                .CheckoutAsync(
-                    scenario.UserId,
-                    new CheckoutDto { AddressId = scenario.AddressId })).Id;
+                .CheckoutAsync(scenario.UserId, new CheckoutDto { AddressId = scenario.AddressId }, TestContext.Current.CancellationToken)).Id;
         }
 
         await using var otherUserContext = _fixture.CreateContext();
         var otherUserService = OrderServiceFactory.Create(otherUserContext);
 
-        Assert.Null(await otherUserService.GetOrderByIdAsync(
-            orderId,
-            scenario.OtherUserId));
+        Assert.Null(await otherUserService.GetOrderByIdAsync(orderId, scenario.OtherUserId, TestContext.Current.CancellationToken));
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => otherUserService.CancelOrderAsync(
-                scenario.OtherUserId,
-                orderId));
+            () => otherUserService.CancelOrderAsync(scenario.OtherUserId, orderId, TestContext.Current.CancellationToken));
 
         var controller = new OrderController(otherUserService)
         {

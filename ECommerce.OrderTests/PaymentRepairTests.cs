@@ -31,10 +31,10 @@ public sealed class PaymentRepairTests
 
         var statuses = await context.PaymentStatuses
             .AsNoTracking()
-            .ToDictionaryAsync(status => status.Status);
+            .ToDictionaryAsync(status => status.Status, cancellationToken: TestContext.Current.CancellationToken);
         var methods = await context.PaymentMethods
             .AsNoTracking()
-            .ToDictionaryAsync(method => method.Method);
+            .ToDictionaryAsync(method => method.Method, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(PaymentStatusCatalog.PendingId, statuses[PaymentStatusCatalog.Pending].Id);
         Assert.Equal(PaymentStatusCatalog.CompletedId, statuses[PaymentStatusCatalog.Completed].Id);
@@ -57,9 +57,9 @@ public sealed class PaymentRepairTests
 
         await using var blocker = _fixture.CreateContext();
         await using var blockerTransaction =
-            await blocker.Database.BeginTransactionAsync();
+            await blocker.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-        Assert.True(await new OrderRepository(blocker).LockOrderRowAsync(scenario.OrderId));
+        Assert.True(await new OrderRepository(blocker).LockOrderRowAsync(scenario.OrderId, TestContext.Current.CancellationToken));
 
         var completionTask = CompleteWithNewContextAsync(
             scenario,
@@ -82,10 +82,10 @@ public sealed class PaymentRepairTests
         await using var verifyContext = _fixture.CreateContext();
         var order = await verifyContext.Orders
             .Include(item => item.OrderStatus)
-            .SingleAsync(item => item.Id == scenario.OrderId);
+            .SingleAsync(item => item.Id == scenario.OrderId, cancellationToken: TestContext.Current.CancellationToken);
         var persistedPayment = await verifyContext.Payments
             .IgnoreQueryFilters()
-            .SingleAsync(item => item.Id == payment.Id);
+            .SingleAsync(item => item.Id == payment.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(
             order.OrderStatus.Name == "Cancelled" &&
@@ -105,9 +105,9 @@ public sealed class PaymentRepairTests
 
         await using var blocker = _fixture.CreateContext();
         await using var blockerTransaction =
-            await blocker.Database.BeginTransactionAsync();
+            await blocker.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-        Assert.True(await new OrderRepository(blocker).LockOrderRowAsync(scenario.OrderId));
+        Assert.True(await new OrderRepository(blocker).LockOrderRowAsync(scenario.OrderId, TestContext.Current.CancellationToken));
 
         var createTask = CreateWithNewContextAsync(
             scenario,
@@ -127,11 +127,11 @@ public sealed class PaymentRepairTests
         await using var verifyContext = _fixture.CreateContext();
         var order = await verifyContext.Orders
             .Include(item => item.OrderStatus)
-            .SingleAsync(item => item.Id == scenario.OrderId);
+            .SingleAsync(item => item.Id == scenario.OrderId, cancellationToken: TestContext.Current.CancellationToken);
         var payments = await verifyContext.Payments
             .IgnoreQueryFilters()
             .Where(item => item.OrderId == scenario.OrderId)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(
             order.OrderStatus.Name == "Cancelled" &&
@@ -153,14 +153,8 @@ public sealed class PaymentRepairTests
             IdempotencyKey = "completion-replay"
         };
 
-        var first = await service.CompletePaymentAsync(
-            payment.Id,
-            scenario.UserId,
-            request);
-        var second = await service.CompletePaymentAsync(
-            payment.Id,
-            scenario.UserId,
-            request);
+        var first = await service.CompletePaymentAsync(payment.Id, scenario.UserId, request, TestContext.Current.CancellationToken);
+        var second = await service.CompletePaymentAsync(payment.Id, scenario.UserId, request, TestContext.Current.CancellationToken);
 
         Assert.Equal(first.Id, second.Id);
         Assert.Equal(first.TransactionId, second.TransactionId);
@@ -169,11 +163,10 @@ public sealed class PaymentRepairTests
         await using var verifyContext = _fixture.CreateContext();
         Assert.Equal(
             1,
-            await verifyContext.Payments.CountAsync(item => item.Id == payment.Id));
+            await verifyContext.Payments.CountAsync(item => item.Id == payment.Id, cancellationToken: TestContext.Current.CancellationToken));
         Assert.Equal(
             1,
-            await verifyContext.Payments.CountAsync(
-                item => item.CompletionIdempotencyKey == "completion-replay"));
+            await verifyContext.Payments.CountAsync(item => item.CompletionIdempotencyKey == "completion-replay", cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -185,9 +178,9 @@ public sealed class PaymentRepairTests
 
         await using var blocker = _fixture.CreateContext();
         await using var blockerTransaction =
-            await blocker.Database.BeginTransactionAsync();
+            await blocker.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
 
-        Assert.True(await new OrderRepository(blocker).LockOrderRowAsync(scenario.OrderId));
+        Assert.True(await new OrderRepository(blocker).LockOrderRowAsync(scenario.OrderId, TestContext.Current.CancellationToken));
 
         var firstTask = CompleteWithNewContextAsync(
             scenario,
@@ -210,14 +203,13 @@ public sealed class PaymentRepairTests
 
         await using var verifyContext = _fixture.CreateContext();
         var persistedPayment = await verifyContext.Payments
-            .SingleAsync(item => item.Id == payment.Id);
+            .SingleAsync(item => item.Id == payment.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(PaymentStatusCatalog.CompletedId, persistedPayment.PaymentStatusId);
         Assert.Contains(
             persistedPayment.CompletionIdempotencyKey,
             new[] { "completion-compete-a", "completion-compete-b" });
-        Assert.Equal(1, await verifyContext.Payments.CountAsync(
-            item => item.CompletionIdempotencyKey != null));
+        Assert.Equal(1, await verifyContext.Payments.CountAsync(item => item.CompletionIdempotencyKey != null, cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -235,11 +227,11 @@ public sealed class PaymentRepairTests
 
         await using var blocker = _fixture.CreateContext();
         await using var blockerTransaction =
-            await blocker.Database.BeginTransactionAsync();
+            await blocker.Database.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var orderRepository = new OrderRepository(blocker);
 
-        Assert.True(await orderRepository.LockOrderRowAsync(firstScenario.OrderId));
-        Assert.True(await orderRepository.LockOrderRowAsync(secondScenario.OrderId));
+        Assert.True(await orderRepository.LockOrderRowAsync(firstScenario.OrderId, TestContext.Current.CancellationToken));
+        Assert.True(await orderRepository.LockOrderRowAsync(secondScenario.OrderId, TestContext.Current.CancellationToken));
 
         const string completionKey = "same-completion-key";
         var firstTask = CompleteWithNewContextAsync(
@@ -267,11 +259,136 @@ public sealed class PaymentRepairTests
         await using var verifyContext = _fixture.CreateContext();
         var owners = await verifyContext.Payments
             .Where(payment => payment.CompletionIdempotencyKey == completionKey)
-            .ToListAsync();
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var owner = Assert.Single(owners);
         Assert.Equal(PaymentStatusCatalog.CompletedId, owner.PaymentStatusId);
         Assert.Contains(owner.Id, new[] { firstPayment.Id, secondPayment.Id });
+    }
+
+    [Fact]
+    public async Task Creation_idempotency_replays_the_same_request_and_rejects_conflicting_data()
+    {
+        await _fixture.ResetAsync();
+        var scenario = await SeedCheckedOutOrderAsync();
+        const string idempotencyKey = "creation-replay";
+
+        var first = await CreatePaymentAsync(scenario, idempotencyKey);
+        var replay = await CreatePaymentAsync(scenario, idempotencyKey);
+
+        Assert.Equal(first.Id, replay.Id);
+
+        await using var context = _fixture.CreateContext();
+        var service = CreatePaymentService(context);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.AddPaymentAsync(scenario.UserId, new CreatePaymentRequestDto
+            {
+                OrderId = scenario.OrderId,
+                PaymentMethodId = CardPaymentMethodId,
+                Amount = scenario.Amount + 1,
+                Currency = "USD",
+                IdempotencyKey = idempotencyKey
+            }, TestContext.Current.CancellationToken));
+
+        await using var verifyContext = _fixture.CreateContext();
+        Assert.Equal(1, await verifyContext.Payments.CountAsync(payment => payment.OrderId == scenario.OrderId, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Customer_cannot_read_or_mutate_another_users_payment()
+    {
+        await _fixture.ResetAsync();
+        var ownerScenario = await SeedCheckedOutOrderAsync();
+        var otherScenario = await SeedCheckedOutOrderAsync();
+        var payment = await CreatePaymentAsync(ownerScenario, "ownership-create");
+
+        await using var context = _fixture.CreateContext();
+        var service = CreatePaymentService(context);
+
+        Assert.Null(await service.GetPaymentByIdAsync(payment.Id, otherScenario.UserId, isAdministrator: false, cancellationToken: TestContext.Current.CancellationToken));
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UpdatePaymentAsync(payment.Id, otherScenario.UserId, isAdministrator: false, new UpdatePaymentRequestDto { PaymentMethodId = CardPaymentMethodId }, cancellationToken: TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.DeletePaymentAsync(payment.Id, otherScenario.UserId, isAdministrator: false, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Payment_creation_rejects_invalid_order_amount_currency_and_method()
+    {
+        await _fixture.ResetAsync();
+        var scenario = await SeedCheckedOutOrderAsync();
+
+        await using var context = _fixture.CreateContext();
+        var service = CreatePaymentService(context);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.AddPaymentAsync(scenario.UserId, new CreatePaymentRequestDto
+            {
+                OrderId = scenario.OrderId,
+                PaymentMethodId = CardPaymentMethodId,
+                Amount = scenario.Amount + 1,
+                Currency = "USD",
+                IdempotencyKey = "invalid-amount"
+            }, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.AddPaymentAsync(scenario.UserId, new CreatePaymentRequestDto
+            {
+                OrderId = scenario.OrderId,
+                PaymentMethodId = CardPaymentMethodId,
+                Amount = scenario.Amount,
+                Currency = "EUR",
+                IdempotencyKey = "invalid-currency"
+            }, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.AddPaymentAsync(scenario.UserId, new CreatePaymentRequestDto
+            {
+                OrderId = scenario.OrderId,
+                PaymentMethodId = Guid.NewGuid(),
+                Amount = scenario.Amount,
+                Currency = "USD",
+                IdempotencyKey = "invalid-method"
+            }, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Failed_attempt_is_terminal_and_retriable_while_completed_attempt_is_immutable()
+    {
+        await _fixture.ResetAsync();
+        var scenario = await SeedCheckedOutOrderAsync();
+        var failedAttempt = await CreatePaymentAsync(scenario, "failed-attempt-create");
+
+        await using (var failContext = _fixture.CreateContext())
+        {
+            await CreatePaymentService(failContext).DeletePaymentAsync(failedAttempt.Id, scenario.UserId, isAdministrator: false, cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        await using (var failedContext = _fixture.CreateContext())
+        {
+            var service = CreatePaymentService(failedContext);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.CompletePaymentAsync(failedAttempt.Id, scenario.UserId, new CompletePaymentRequestDto { IdempotencyKey = "failed-attempt-complete" }, TestContext.Current.CancellationToken));
+        }
+
+        var retry = await CreatePaymentAsync(scenario, "retry-after-failure");
+
+        await using (var completionContext = _fixture.CreateContext())
+        {
+            await CreatePaymentService(completionContext).CompletePaymentAsync(retry.Id, scenario.UserId, new CompletePaymentRequestDto { IdempotencyKey = "completed-attempt" }, TestContext.Current.CancellationToken);
+        }
+
+        await using (var immutableContext = _fixture.CreateContext())
+        {
+            var service = CreatePaymentService(immutableContext);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.UpdatePaymentAsync(retry.Id, scenario.UserId, isAdministrator: false, new UpdatePaymentRequestDto { PaymentMethodId = CardPaymentMethodId }, cancellationToken: TestContext.Current.CancellationToken));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeletePaymentAsync(retry.Id, scenario.UserId, isAdministrator: false, cancellationToken: TestContext.Current.CancellationToken));
+        }
+
+        await using var verifyContext = _fixture.CreateContext();
+        var attempts = await verifyContext.Payments
+            .Where(payment => payment.OrderId == scenario.OrderId)
+            .OrderBy(payment => payment.CreatedAt)
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(2, attempts.Count);
+        Assert.Contains(attempts, payment =>
+            payment.Id == failedAttempt.Id &&
+            payment.PaymentStatusId == PaymentStatusCatalog.FailedId);
+        Assert.Contains(attempts, payment =>
+            payment.Id == retry.Id &&
+            payment.PaymentStatusId == PaymentStatusCatalog.CompletedId);
     }
 
     private async Task<PaymentScenario> SeedCheckedOutOrderAsync()

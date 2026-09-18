@@ -34,9 +34,12 @@ public sealed class PostgreSqlOrderFixture : IAsyncLifetime
         _databaseName = databaseName;
     }
 
-    public Task InitializeAsync() => InitializeDatabaseAsync();
+    public async ValueTask InitializeAsync()
+    {
+        await InitializeDatabaseAsync();
+    }
 
-    public Task DisposeAsync() => Task.CompletedTask;
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     public ECommerceDbContext CreateContext()
     {

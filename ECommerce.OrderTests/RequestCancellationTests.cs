@@ -54,7 +54,7 @@ public sealed class RequestCancellationTests
         Assert.Equal(StatusCodes.Status408RequestTimeout, context.Response.StatusCode);
         context.Response.Body.Position = 0;
         using var reader = new StreamReader(context.Response.Body);
-        var body = await reader.ReadToEndAsync();
+        var body = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
         Assert.Contains("408", body, StringComparison.Ordinal);
     }
 

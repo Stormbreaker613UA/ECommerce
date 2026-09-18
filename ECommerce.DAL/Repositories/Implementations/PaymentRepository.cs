@@ -88,15 +88,6 @@ public class PaymentRepository : IPaymentRepository
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(
-        Payment payment,
-        CancellationToken cancellationToken = default)
-    {
-        _dbContext.Attach(payment);
-        _dbContext.Entry(payment).State = EntityState.Modified;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
     public async Task<int> TryCompleteAsync(
         Guid paymentId,
         Guid expectedStatusId,

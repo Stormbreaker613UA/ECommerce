@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- Commit a resolved dependency graph for every project. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Prevent IDE or CLI restores from silently changing that graph. -->
+    <RestoreLockedMode>true</RestoreLockedMode>
+  </PropertyGroup>
+</Project>

@@ -36,10 +36,6 @@ namespace ECommerce.DAL.Repositories.Interfaces
             Payment payment,
             CancellationToken cancellationToken = default);
 
-        Task UpdateAsync(
-            Payment payment,
-            CancellationToken cancellationToken = default);
-
         Task<int> TryCompleteAsync(
             Guid paymentId,
             Guid expectedStatusId,

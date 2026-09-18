@@ -643,8 +643,6 @@ public class PaymentService : IPaymentService
             PaymentMethod = payment.PaymentMethod?.Method ?? string.Empty,
             Status = payment.PaymentStatus?.Status ?? ResolveStatusName(payment.PaymentStatusId),
             TransactionId = payment.TransactionId,
-            CardLast4 = payment.CardLast4,
-            CardBrand = payment.CardBrand,
             PaidAt = payment.PaidAt,
             CreatedAt = payment.CreatedAt,
             UpdatedAt = payment.UpdatedAt
